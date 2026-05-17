@@ -1,0 +1,29 @@
+const admin = require('../config/firebase');
+
+async function authMiddleware(request, reply) {
+  try {
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader) {
+      return reply.status(401).send({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    request.user = decoded;
+
+  } catch (error) {
+    console.error(error.message);
+    return reply.status(401).send({
+      success: false,
+      message: 'Invalid token'
+    });
+  }
+}
+
+module.exports = authMiddleware;
