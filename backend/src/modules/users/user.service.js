@@ -46,7 +46,29 @@ async function listUsers() {
   return result.rows;
 }
 
+async function getUserByFirebaseUid(
+  firebaseUid
+) {
+
+  const result =
+    await pool.query(
+
+      `
+      SELECT *
+      FROM users
+      WHERE firebase_uid = $1
+      LIMIT 1
+      `,
+
+      [firebaseUid]
+
+    );
+
+  return result.rows[0];
+}
+
 module.exports = {
   createUser,
-  listUsers
+  listUsers,
+  getUserByFirebaseUid
 };

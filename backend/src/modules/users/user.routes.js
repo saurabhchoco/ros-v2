@@ -1,4 +1,6 @@
 const userController = require('./user.controller');
+const authMiddleware =
+  require('../../middleware/authMiddleware');
 
 async function userRoutes(app) {
 
@@ -11,6 +13,16 @@ async function userRoutes(app) {
     '/api/v1/users/list',
     userController.listUsers
   );
+
+  app.get(
+    '/api/v1/me',
+  {
+    preHandler: [
+      authMiddleware
+    ]
+  },
+  userController.getMe
+);
 
 }
 

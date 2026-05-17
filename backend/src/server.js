@@ -4,12 +4,20 @@ const Fastify = require('fastify');
 const pool = require('./config/db');
 const cors = require('@fastify/cors');
 
+const menuRoutes = require('./modules/menu/menu.routes');
 const errorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./modules/users/user.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
 const orderRoutes = require('./modules/orders/order.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
+
+const helmet =
+  require('@fastify/helmet');
+
+const rateLimit =
+  require('@fastify/rate-limit');
 
 const app = Fastify({
   logger: true
@@ -42,10 +50,19 @@ app.get(
   }
 );
 
+app.register(helmet);
+
+app.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute'
+});
+
 app.register(organizationRoutes);
 app.register(outletRoutes);
 app.register(userRoutes);
 app.register(orderRoutes);
+app.register(menuRoutes);
+app.register(adminRoutes);
 
 const start = async () => {
   try {
