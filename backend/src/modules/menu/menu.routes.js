@@ -4,13 +4,21 @@ const menuController =
 const authMiddleware =
   require('../../middleware/authMiddleware');
 
+const userContextMiddleware =
+  require('../../middleware/userContextMiddleware');
+
+const roleMiddleware =
+  require('../../middleware/roleMiddleware');
+
 async function menuRoutes(app) {
 
   app.post(
     '/api/v1/menu/categories/create',
     {
       preHandler: [
-        authMiddleware
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
       ]
     },
     menuController.createCategory
@@ -20,7 +28,8 @@ async function menuRoutes(app) {
     '/api/v1/menu/categories/list',
     {
       preHandler: [
-        authMiddleware
+        authMiddleware,
+        userContextMiddleware
       ]
     },
     menuController.listCategories
@@ -30,7 +39,9 @@ async function menuRoutes(app) {
     '/api/v1/menu/items/create',
     {
       preHandler: [
-        authMiddleware
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
       ]
     },
     menuController.createMenuItem
@@ -40,7 +51,8 @@ async function menuRoutes(app) {
     '/api/v1/menu/items/list',
     {
       preHandler: [
-        authMiddleware
+        authMiddleware,
+        userContextMiddleware
       ]
     },
     menuController.listMenuItems
@@ -48,6 +60,13 @@ async function menuRoutes(app) {
 
   app.post(
     '/api/v1/menu/import-csv',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
+      ]
+    },
     menuController.importCSV
   );
 

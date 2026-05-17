@@ -216,21 +216,21 @@ async function importCSV(
 
     );
 
-    await menuService
-      .importMenuCSV(
+    const summary =
+      await menuService
+        .importMenuCSV(
+          filePath,
+          organizationId,
+          outletId
+        );
 
-        filePath,
-        organizationId,
-        outletId
-
-      );
+    // Clean up uploaded file
+    await fs.promises.unlink(filePath);
 
     return reply.send({
-
       success: true,
-      message:
-        'CSV imported successfully'
-
+      message: 'CSV import complete',
+      summary
     });
 
   } catch (error) {

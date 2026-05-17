@@ -1,12 +1,15 @@
 const pool = require('../../config/db');
-const generateId = require('../../utils/generateId');
+const {
+  generateId
+} = require('../../utils/generateId');
 
 const {
   createAuditLog
 } = require('../audit/audit.service');
 
 const {
-  pushOrderToKDS
+  pushOrderToKDS,
+  updateOrderInKDS
 } = require('../kds/kdsRealtime.service');
 
 async function createOrder(data) {
@@ -155,6 +158,70 @@ async function createOrder(data) {
   }
 }
 
+async function updateOrderStatus(
+  orderId,
+  status,
+  userContext
+) {
+
+  const validStatuses = [
+    'NEW',
+    'PREPARING',
+    'READY',
+    'COMPLETED',
+    'CANCELLED'
+  ];
+
+  if (!validStatuses.includes(status)) {
+    const error = new Error(
+      `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await pool.query(
+    `
+    UPDATE orders
+    SET
+      order_status = $1,
+      updated_at = NOW()
+    WHERE
+      id = $2
+    AND
+      organization_id = $3
+    RETURNING *
+    `,
+    [
+      status,
+      orderId,
+      userContext.organization_id
+    ]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error('Order not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  await updateOrderInKDS(orderId, status);
+
+  await createAuditLog({
+    organizationId: userContext.organization_id,
+    outletId: userContext.outlet_id,
+    userId: userContext.id,
+    action: 'ORDER_STATUS_UPDATED',
+    entityType: 'ORDER',
+    entityId: orderId,
+    newValue: { status }
+  });
+
+  return result.rows[0];
+
+}
+
 module.exports = {
-  createOrder
+  createOrder,
+  updateOrderStatus
 };

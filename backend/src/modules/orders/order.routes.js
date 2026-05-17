@@ -11,6 +11,7 @@ const orderAccessMiddleware =
   require('../../middleware/orderAccessMiddleware');
 
 async function orderRoutes(app) {
+
   app.post(
     '/api/v1/orders/create',
     {
@@ -22,6 +23,18 @@ async function orderRoutes(app) {
     },
     orderController.createOrder
   );
+
+  app.patch(
+    '/api/v1/orders/:orderId/status',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware
+      ]
+    },
+    orderController.updateOrderStatus
+  );
+
 }
 
 module.exports = orderRoutes;

@@ -1,5 +1,7 @@
 const pool = require('../../config/db');
-const generateId = require('../../utils/generateId');
+const {
+  generateId
+} = require('../../utils/generateId');
 
 async function createOrganization(data) {
   const id = generateId('org');

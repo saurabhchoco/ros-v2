@@ -155,15 +155,12 @@ async function listMenuItems(
 }
 
 async function importMenuCSV(
-
   filePath,
   organizationId,
   outletId
-
 ) {
 
   return new Promise(
-
     (resolve, reject) => {
 
       const results = [];
@@ -172,158 +169,134 @@ async function importMenuCSV(
 
         .pipe(csv())
 
-        .on(
+        .on('data', row => {
+          results.push(row);
+        })
 
-          'data',
+        .on('end', async () => {
 
-          row => {
+          const summary = {
+            total: results.length,
+            imported: 0,
+            skipped: 0,
+            skippedRows: []
+          };
 
-            results.push(row);
+          try {
 
-          }
+            for (const [index, row] of results.entries()) {
 
-        )
-
-        .on(
-
-          'end',
-
-          async () => {
-
-            try {
-
-              for (
-
-                const row
-                of results
-
+              // Validate required fields
+              if (
+                !row.name ||
+                !row.base_price ||
+                !row.category_name
               ) {
-
-                const categoryResult =
-                  await pool.query(
-
-                    `
-                    SELECT id
-                    FROM menu_categories
-                    WHERE
-                      name = $1
-                    LIMIT 1
-                    `,
-
-                    [
-                      row.category_name
-                    ]
-
-                  );
-
-                if (
-                  !categoryResult.rows[0]
-                ) {
-
-                  continue;
-                }
-
-                const categoryId =
-                  categoryResult
-                    .rows[0]
-                    .id;
-
-                await pool.query(
-
-                  `
-                  INSERT INTO menu_items (
-
-                    id,
-                    organization_id,
-                    outlet_id,
-
-                    category_id,
-
-                    item_code,
-                    name,
-                    description,
-
-                    base_price,
-                    tax_percentage,
-
-                    is_veg,
-                    is_available,
-
-                    created_at,
-                    updated_at
-
-                  )
-
-                  VALUES (
-
-                    $1,
-                    $2,
-                    $3,
-
-                    $4,
-
-                    $5,
-                    $6,
-                    $7,
-
-                    $8,
-                    $9,
-
-                    $10,
-                    true,
-
-                    NOW(),
-                    NOW()
-
-                  )
-                  `,
-
-                  [
-
-                    generateId(
-                      'itm'
-                    ),
-
-                    organizationId,
-                    outletId,
-
-                    categoryId,
-
-                    row.item_code,
-                    row.name,
-                    row.description,
-
-                    Number(
-                      row.base_price
-                    ),
-
-                    Number(
-                      row.tax_percentage
-                    ),
-
-                    row.is_veg ===
-                      'true'
-
-                  ]
-
-                );
-
+                summary.skipped++;
+                summary.skippedRows.push({
+                  row: index + 1,
+                  reason: 'Missing required field (name, base_price, or category_name)',
+                  data: row
+                });
+                continue;
               }
 
-              resolve(true);
+              // Validate price is a number
+              const price = Number(row.base_price);
+              if (isNaN(price) || price < 0) {
+                summary.skipped++;
+                summary.skippedRows.push({
+                  row: index + 1,
+                  reason: `Invalid base_price: "${row.base_price}"`,
+                  data: row
+                });
+                continue;
+              }
 
-            } catch (error) {
+              // Tenant-scoped category lookup
+              const categoryResult =
+                await pool.query(
+                  `
+                  SELECT id
+                  FROM menu_categories
+                  WHERE
+                    name = $1
+                  AND
+                    organization_id = $2
+                  AND
+                    outlet_id = $3
+                  LIMIT 1
+                  `,
+                  [
+                    row.category_name,
+                    organizationId,
+                    outletId
+                  ]
+                );
 
-              reject(error);
+              if (!categoryResult.rows[0]) {
+                summary.skipped++;
+                summary.skippedRows.push({
+                  row: index + 1,
+                  reason: `Category "${row.category_name}" not found for this outlet`,
+                  data: row
+                });
+                continue;
+              }
+
+              const categoryId =
+                categoryResult.rows[0].id;
+
+              await pool.query(
+                `
+                INSERT INTO menu_items (
+                  id,
+                  organization_id,
+                  outlet_id,
+                  category_id,
+                  item_code,
+                  name,
+                  description,
+                  base_price,
+                  tax_percentage,
+                  is_veg,
+                  is_available,
+                  created_at,
+                  updated_at
+                )
+                VALUES (
+                  $1,$2,$3,$4,$5,
+                  $6,$7,$8,$9,$10,
+                  true,NOW(),NOW()
+                )
+                `,
+                [
+                  generateId('itm'),
+                  organizationId,
+                  outletId,
+                  categoryId,
+                  row.item_code || null,
+                  row.name,
+                  row.description || null,
+                  price,
+                  Number(row.tax_percentage) || 0,
+                  row.is_veg === 'true'
+                ]
+              );
+
+              summary.imported++;
 
             }
 
+            resolve(summary);
+
+          } catch (error) {
+            reject(error);
           }
 
-        );
+        });
 
     }
-
   );
 
 }

@@ -44,13 +44,14 @@ async function createOutlet(data) {
   return result.rows[0];
 }
 
-async function listOutlets() {
+async function listOutlets(organizationId) {
 
   const result = await pool.query(`
     SELECT *
     FROM outlets
+    WHERE organization_id = $1
     ORDER BY created_at DESC
-  `);
+  `, [organizationId]);
 
   return result.rows;
 }

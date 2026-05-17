@@ -37,6 +37,37 @@ async function createOrder(
   });
 }
 
+async function updateOrderStatus(
+  request,
+  reply
+) {
+
+  const { orderId } = request.params;
+  const { status } = request.body;
+
+  if (!status) {
+    return reply.status(400).send({
+      success: false,
+      message: 'status is required in request body'
+    });
+  }
+
+  const order =
+    await orderService.updateOrderStatus(
+      orderId,
+      status,
+      request.userContext
+    );
+
+  return reply.send({
+    success: true,
+    message: `Order status updated to ${status}`,
+    data: order
+  });
+
+}
+
 module.exports = {
-  createOrder
+  createOrder,
+  updateOrderStatus
 };

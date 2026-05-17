@@ -38,7 +38,11 @@ async function createOutlet(request, reply) {
 
 async function listOutlets(request, reply) {
 
-  const outlets = await outletService.listOutlets();
+  const organizationId =
+    request.userContext.organization_id;
+
+  const outlets =
+    await outletService.listOutlets(organizationId);
 
   return reply.send({
     success: true,

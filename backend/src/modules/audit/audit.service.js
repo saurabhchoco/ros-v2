@@ -1,6 +1,6 @@
 const pool = require('../../config/db');
 
-const generateId =
+const { generateId } =
   require('../../utils/generateId');
 
 async function createAuditLog({
