@@ -6,6 +6,12 @@ const {
 const menuService =
   require('./menu.service');
 
+const fs =
+  require('fs');
+
+const path =
+  require('path');
+
 async function createCategory(
   request,
   reply
@@ -114,9 +120,139 @@ async function listMenuItems(
   });
 }
 
+async function importCSV(
+  request,
+  reply
+) {
+
+  try {
+
+    const parts =
+      request.parts();
+
+    let fileData = null;
+
+    let organizationId =
+      null;
+
+    let outletId =
+      null;
+
+    for await (
+      const part
+      of parts
+    ) {
+
+      if (
+        part.type === 'file'
+      ) {
+
+        fileData = part;
+
+      } else {
+
+        if (
+          part.fieldname ===
+          'organizationId'
+        ) {
+
+          organizationId =
+            part.value;
+
+        }
+
+        if (
+          part.fieldname ===
+          'outletId'
+        ) {
+
+          outletId =
+            part.value;
+
+        }
+
+      }
+
+    }
+
+    if (!fileData) {
+
+      return reply.status(400).send({
+
+        success: false,
+        message:
+          'CSV file missing'
+
+      });
+
+    }
+
+    const filePath =
+      path.join(
+
+        __dirname,
+
+        '../../../uploads',
+
+        fileData.filename
+
+      );
+
+    await fs.promises.mkdir(
+
+      path.dirname(filePath),
+
+      {
+        recursive: true
+      }
+
+    );
+
+    await fs.promises.writeFile(
+
+      filePath,
+
+      await fileData.toBuffer()
+
+    );
+
+    await menuService
+      .importMenuCSV(
+
+        filePath,
+        organizationId,
+        outletId
+
+      );
+
+    return reply.send({
+
+      success: true,
+      message:
+        'CSV imported successfully'
+
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    return reply.status(500).send({
+
+      success: false,
+      message:
+        error.message
+
+    });
+
+  }
+
+}
+
 module.exports = {
   createCategory,
   listCategories,
   createMenuItem,
-  listMenuItems
+  listMenuItems,
+  importCSV
 };

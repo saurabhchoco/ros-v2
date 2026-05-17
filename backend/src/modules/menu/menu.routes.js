@@ -46,6 +46,11 @@ async function menuRoutes(app) {
     menuController.listMenuItems
   );
 
+  app.post(
+    '/api/v1/menu/import-csv',
+    menuController.importCSV
+  );
+
 }
 
 module.exports =

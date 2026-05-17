@@ -1,6 +1,8 @@
 const pool = require('../../config/db');
 
-const generateId = require('../../utils/generateId');
+const {
+  generateId
+} = require('../../utils/generateId');
 
 async function createOutlet(data) {
 
@@ -11,17 +13,30 @@ async function createOutlet(data) {
       id,
       organization_id,
       name,
-      outlet_type
+      outlet_type,
+      status,
+      created_at,
+      updated_at
     )
-    VALUES ($1, $2, $3, $4)
+    VALUES (
+
+        $1,
+        $2,
+        $3,
+        $4,
+        'ACTIVE',
+        NOW(),
+        NOW()
+
+      )
     RETURNING *
   `;
 
   const values = [
-    id,
-    data.organizationId,
-    data.name,
-    data.outletType
+        id,
+        data.organizationId,
+        data.name,
+        data.outletType
   ];
 
   const result = await pool.query(query, values);
@@ -40,7 +55,81 @@ async function listOutlets() {
   return result.rows;
 }
 
+async function createOutletManager(
+
+  data,
+  firebaseUid
+
+) {
+
+  const userId =
+    generateId('usr');
+
+  const result =
+    await pool.query(
+
+      `
+      INSERT INTO users (
+
+        id,
+        firebase_uid,
+
+        organization_id,
+        outlet_id,
+
+        full_name,
+        email,
+
+        role,
+        status,
+
+        created_at,
+        updated_at
+
+      )
+
+      VALUES (
+
+        $1,
+        $2,
+
+        $3,
+        $4,
+
+        $5,
+        $6,
+
+        'OUTLET_MANAGER',
+        'ACTIVE',
+
+        NOW(),
+        NOW()
+
+      )
+
+      RETURNING *
+      `,
+
+      [
+
+        userId,
+        firebaseUid,
+
+        data.organizationId,
+        data.outletId,
+
+        data.fullName,
+        data.email
+
+      ]
+
+    );
+
+  return result.rows[0];
+}
+
 module.exports = {
   createOutlet,
-  listOutlets
+  listOutlets,
+  createOutletManager
 };

@@ -4,6 +4,13 @@ const {
 
 const outletService = require('./outlet.service');
 
+const admin =
+  require('../../config/firebase');
+
+const {
+  createOutletManagerSchema
+} = require('./outlet.schema');
+
 async function createOutlet(request, reply) {
 
   const parsed = createOutletSchema.safeParse(
@@ -39,7 +46,83 @@ async function listOutlets(request, reply) {
   });
 }
 
+async function createOutletManager(
+  request,
+  reply
+) {
+
+  const parsed =
+    createOutletManagerSchema
+      .safeParse(
+        request.body
+      );
+
+  if (!parsed.success) {
+
+    return reply.status(400).send({
+
+      success: false,
+      error:
+        parsed.error
+
+    });
+
+  }
+
+  try {
+
+    const data =
+      parsed.data;
+
+    const firebaseUser =
+      await admin.auth()
+        .createUser({
+
+          email:
+            data.email,
+
+          password:
+            data.password,
+
+          displayName:
+            data.fullName
+
+        });
+
+    const manager =
+      await outletService
+        .createOutletManager(
+
+          data,
+          firebaseUser.uid
+
+        );
+
+    return reply.send({
+
+      success: true,
+      data: manager
+
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    return reply.status(500).send({
+
+      success: false,
+      message:
+        error.message
+
+    });
+
+  }
+
+}
+
 module.exports = {
   createOutlet,
-  listOutlets
+  listOutlets,
+  createOutletManager
 };

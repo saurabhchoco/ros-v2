@@ -12,6 +12,10 @@ async function outletRoutes(app) {
     outletController.listOutlets
   );
 
+  app.post(
+    '/api/v1/outlets/create-manager',
+    outletController.createOutletManager
+  );
 }
 
 module.exports = outletRoutes;

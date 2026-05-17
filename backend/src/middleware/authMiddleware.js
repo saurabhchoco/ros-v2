@@ -18,7 +18,7 @@ async function authMiddleware(request, reply) {
     request.user = decoded;
 
   } catch (error) {
-    console.error(error.message);
+    console.error(error);
     return reply.status(401).send({
       success: false,
       message: 'Invalid token'

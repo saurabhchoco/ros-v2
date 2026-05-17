@@ -19,9 +19,14 @@ const helmet =
 const rateLimit =
   require('@fastify/rate-limit');
 
+const multipart =
+  require('@fastify/multipart');
+
 const app = Fastify({
   logger: true
 });
+
+app.register(multipart);
 
 app.register(cors, {
   origin: true
