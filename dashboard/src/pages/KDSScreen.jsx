@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useOrderStore } from '../store/orderStore';
 import { kdsService } from '../services/firebase';
@@ -33,72 +33,124 @@ export default function KDSScreen() {
     try {
       await apiService.updateOrderStatus(orderId, newStatus);
     } catch (error) {
-      console.error('Failed to update order:', error);
+      alert('Failed to update order status');
     }
   };
 
-  const grouped = {
+  const grouped = useMemo(() => ({
     NEW: orders.filter(o => o.orderStatus === 'NEW'),
     PREPARING: orders.filter(o => o.orderStatus === 'PREPARING'),
-    READY: orders.filter(o => o.orderStatus === 'READY')
-  };
+    READY: orders.filter(o => o.orderStatus === 'READY'),
+  }), [orders]);
 
   if (loading) {
-    return <div className="p-8 text-center">Loading KDS...</div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500 text-lg">Loading KDS...</div>
+      </div>
+    );
   }
 
   if (!outlet) {
-    return <div className="p-8 text-center text-red-600">No outlet assigned</div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-500">Loading outlet...</div>
+      </div>
+    );
   }
 
+  const columns = [
+    {
+      key: 'NEW',
+      label: '🆕 New Orders',
+      orders: grouped.NEW,
+      bg: 'bg-red-50',
+      border: 'border-red-400',
+      badge: 'bg-indigo-500',
+      nextLabel: 'Start Preparing',
+      nextStatus: 'PREPARING',
+      btnColor: 'bg-indigo-500 hover:bg-indigo-600',
+    },
+    {
+      key: 'PREPARING',
+      label: '👨‍🍳 Preparing',
+      orders: grouped.PREPARING,
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-400',
+      badge: 'bg-yellow-500',
+      nextLabel: 'Mark Ready',
+      nextStatus: 'READY',
+      btnColor: 'bg-yellow-500 hover:bg-yellow-600',
+    },
+    {
+      key: 'READY',
+      label: '✅ Ready',
+      orders: grouped.READY,
+      bg: 'bg-green-50',
+      border: 'border-green-400',
+      badge: 'bg-green-500',
+      nextLabel: 'Complete Order',
+      nextStatus: 'COMPLETED',
+      btnColor: 'bg-green-500 hover:bg-green-600',
+    },
+  ];
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">
-          {outlet.outletName || 'Kitchen Display System'}
-        </h2>
-        <p className="text-gray-600 mt-2">{orders.length} active orders</p>
+    <div className="p-6 h-full flex flex-col">
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {outlet.outletName || outlet.fullName || 'Kitchen Display System'}
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Real-time order management
+          </p>
+        </div>
+        <div className="bg-indigo-500 text-white px-4 py-2 rounded-full font-bold text-sm">
+          {orders.length} active order{orders.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-lg font-bold mb-4">🆕 New ({grouped.NEW.length})</h3>
-          <div className="space-y-4">
-            {grouped.NEW.map(order => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Kanban Columns */}
+      <div className="grid grid-cols-3 gap-6 flex-1 min-h-0">
+        {columns.map(col => (
+          <div
+            key={col.key}
+            className={`${col.bg} border-t-4 ${col.border} rounded-2xl p-5 flex flex-col overflow-hidden`}
+          >
+            {/* Column Header */}
+            <div className="flex items-center justify-between mb-5 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-800">
+                {col.label}
+              </h3>
+              <span className={`${col.badge} text-white rounded-full px-3 py-1 text-sm font-bold`}>
+                {col.orders.length}
+              </span>
+            </div>
 
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <h3 className="text-lg font-bold mb-4">👨‍🍳 Preparing ({grouped.PREPARING.length})</h3>
-          <div className="space-y-4">
-            {grouped.PREPARING.map(order => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
+            {/* Orders */}
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+              {col.orders.length === 0 ? (
+                <div className="text-center text-gray-400 py-12 text-sm">
+                  No orders
+                </div>
+              ) : (
+                col.orders.map(order => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    nextLabel={col.nextLabel}
+                    nextStatus={col.nextStatus}
+                    btnColor={col.btnColor}
+                    onStatusChange={handleStatusChange}
+                  />
+                ))
+              )}
+            </div>
           </div>
-        </div>
-
-        <div className="bg-green-50 rounded-lg p-4">
-          <h3 className="text-lg font-bold mb-4">✅ Ready ({grouped.READY.length})</h3>
-          <div className="space-y-4">
-            {grouped.READY.map(order => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
