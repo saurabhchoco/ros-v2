@@ -94,8 +94,55 @@ async function getMe(
 
 }
 
+async function updateMe(request, reply) {
+  try {
+    const firebaseUid = request.user.uid;
+    const { fullName, email } = request.body;
+
+    if (!fullName && !email) {
+      return reply.status(400).send({
+        success: false,
+        message: 'At least one field (fullName or email) is required'
+      });
+    }
+
+    const user = await userService.updateUser(
+      firebaseUid,
+      { fullName, email }
+    );
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    return reply.send({
+      success: true,
+      message: 'User updated successfully',
+      data: {
+        id: user.id,
+        fullName: user.full_name,
+        email: user.email,
+        role: user.role,
+        organizationId: user.organization_id,
+        outletId: user.outlet_id
+      }
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    return reply.status(500).send({
+      success: false,
+      message: 'Failed to update user',
+      error: error.message
+    });
+  }
+}
+
 module.exports = {
   createUser,
   listUsers,
-  getMe
+  getMe,
+  updateMe
 };

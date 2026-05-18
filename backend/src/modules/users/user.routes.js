@@ -14,15 +14,39 @@ async function userRoutes(app) {
     userController.listUsers
   );
 
+  // GET /me - Get current user info
   app.get(
     '/api/v1/me',
-  {
-    preHandler: [
-      authMiddleware
-    ]
-  },
-  userController.getMe
-);
+    {
+      preHandler: [
+        authMiddleware
+      ]
+    },
+    userController.getMe
+  );
+
+  // POST /me - Alternative way to get current user info
+  // Some clients prefer POST for authenticated requests
+  app.post(
+    '/api/v1/me',
+    {
+      preHandler: [
+        authMiddleware
+      ]
+    },
+    userController.getMe
+  );
+
+  // PATCH /me - Update current user info
+  app.patch(
+    '/api/v1/me',
+    {
+      preHandler: [
+        authMiddleware
+      ]
+    },
+    userController.updateMe
+  );
 
 }
 

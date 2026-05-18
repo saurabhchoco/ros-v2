@@ -1,3 +1,11 @@
+// UPDATED server.js - Integration Instructions
+// =====================================================
+
+/**
+ * This file shows the updated server.js with auth routes registered.
+ * Replace your current backend/src/server.js with this code.
+ */
+
 require('dotenv').config();
 
 const Fastify = require('fastify');
@@ -13,6 +21,10 @@ const reportRoutes = require('./modules/reports/report.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
+
+// ===== NEW IMPORT =====
+const authRoutes = require('./modules/auth/auth.routes');
+// ======================
 
 const helmet =
   require('@fastify/helmet');
@@ -72,6 +84,11 @@ app.register(rateLimit, {
   timeWindow: '1 minute'
 });
 
+// ===== REGISTER AUTH ROUTES FIRST =====
+app.register(authRoutes);
+// =======================================
+
+// Register other routes
 app.register(organizationRoutes);
 app.register(outletRoutes);
 app.register(userRoutes);
