@@ -14,12 +14,18 @@ export default function RootLayout() {
     navigate('/login');
   };
 
-  const navItems = [
-    { path: '/kds', label: 'KDS Board' },
-    { path: '/orders', label: 'Orders' },
-    { path: '/reports', label: 'Reports' },
-    { path: '/captain', label: 'Captain' },
-  ];
+const role = outlet?.role;
+
+const navItems = [
+  { path: '/kds', label: 'KDS Board' },
+  { path: '/orders', label: 'Orders' },
+  { path: '/reports', label: 'Reports' },
+  { path: '/captain', label: 'Captain' },
+  // Only Super Admin sees this
+  ...(role === 'SUPER_ADMIN'
+    ? [{ path: '/admin', label: '⚙️ Admin' }]
+    : [])
+];
 
   const isActive = (path) =>
     location.pathname === path ||

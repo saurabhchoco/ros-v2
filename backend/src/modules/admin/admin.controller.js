@@ -1,79 +1,122 @@
-const admin =
-  require('../../config/firebase');
-
 const adminService =
   require('./admin.service');
 
-async function createBrand(
+const {
+  successResponse,
+  errorResponse
+} = require('../../utils/apiResponse');
+
+// ── Brand ─────────────────────────────────
+
+async function createBrand(request, reply) {
+  const data = request.body;
+
+  const firebaseUser =
+    await adminService.createFirebaseUser(
+      data.ownerEmail,
+      data.password,
+      data.ownerName
+    );
+
+  const organization =
+    await adminService.createOrganization(data);
+
+  const brandOwner =
+    await adminService.createBrandOwner(
+      data,
+      firebaseUser.uid,
+      organization.id
+    );
+
+  return reply.send(
+    successResponse(
+      { organization, brandOwner },
+      'Brand created successfully'
+    )
+  );
+}
+
+async function listBrands(request, reply) {
+  const organizations =
+    await adminService.listOrganizations();
+
+  return reply.send(
+    successResponse(organizations)
+  );
+}
+
+// ── Outlet ────────────────────────────────
+
+async function createOutlet(request, reply) {
+  const data = request.body;
+
+  const outlet =
+    await adminService.createOutlet(data);
+
+  return reply.send(
+    successResponse(outlet, 'Outlet created successfully')
+  );
+}
+
+async function listOutlets(request, reply) {
+  const { organizationId } = request.query;
+
+  const outlets =
+    await adminService.listOutlets(
+      organizationId || null
+    );
+
+  return reply.send(
+    successResponse(outlets)
+  );
+}
+
+// ── Outlet Manager ────────────────────────
+
+async function createOutletManager(
   request,
   reply
 ) {
+  const data = request.body;
 
-  try {
+  const firebaseUser =
+    await adminService.createFirebaseUser(
+      data.email,
+      data.password,
+      data.fullName
+    );
 
-    const data =
-      request.body;
+  const manager =
+    await adminService.createOutletManager(
+      data,
+      firebaseUser.uid
+    );
 
-    const firebaseUser =
-      await admin.auth()
-        .createUser({
+  return reply.send(
+    successResponse(manager, 'Outlet manager created successfully')
+  );
+}
 
-          email:
-            data.ownerEmail,
+// ── Users ─────────────────────────────────
 
-          password:
-            data.password,
+async function listUsers(request, reply) {
+  const { organizationId } = request.query;
 
-          displayName:
-            data.ownerName
+  const users =
+    await adminService.listUsers(
+      organizationId || null
+    );
 
-        });
-
-    const organization =
-      await adminService
-        .createOrganization(
-          data
-        );
-
-    const brandOwner =
-      await adminService
-        .createBrandOwner(
-
-          data,
-
-          firebaseUser.uid,
-
-          organization.id
-
-        );
-
-    return reply.send({
-
-      success: true,
-
-      data: {
-
-        organization,
-        brandOwner
-
-      }
-
-    });
-
-  } catch (error) {
-    console.log(error);
-    return reply.status(500).send({
-    success: false,
-    message:
-        error.message ||
-        'Brand creation failed'
-    });
-  }
-
+  return reply.send(
+    successResponse(users)
+  );
 }
 
 module.exports = {
-
-  createBrand
-
+  createBrand,
+  listBrands,
+  createOutlet,
+  listOutlets,
+  createOutletManager,
+  listUsers
 };

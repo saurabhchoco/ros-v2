@@ -1,14 +1,29 @@
+const { ROLES } = require('../constants/roles');
+
 function roleMiddleware(allowedRoles = []) {
 
   return async function(request, reply) {
 
-    const userRole = request.user?.role;
+    const userContext = request.userContext;
+
+    if (!userContext) {
+      return reply.status(401).send({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    const userRole = userContext.role;
+
+    // SUPER_ADMIN bypasses all role checks
+    if (userRole === ROLES.SUPER_ADMIN) {
+      return;
+    }
 
     if (!allowedRoles.includes(userRole)) {
-
       return reply.status(403).send({
         success: false,
-        message: 'Forbidden'
+        message: `Forbidden. Required role: ${allowedRoles.join(' or ')}`
       });
     }
 
