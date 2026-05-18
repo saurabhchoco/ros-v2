@@ -53,12 +53,7 @@ export default function RootLayout() {
         <div className="flex items-center gap-3">
           {outlet && (
             <span className="text-white/80 text-sm hidden md:block">
-              {outlet.outletName ||
-                outlet.outlet_name ||
-                outlet.fullName ||
-                outlet.full_name ||
-                'My Outlet'
-              }
+            {outlet.name || 'My Outlet'}
             </span>
           )}
           <button

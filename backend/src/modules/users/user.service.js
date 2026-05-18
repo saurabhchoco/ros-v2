@@ -49,24 +49,31 @@ async function listUsers() {
   return result.rows;
 }
 
-async function getUserByFirebaseUid(
-  firebaseUid
-) {
-
-  const result =
-    await pool.query(
-
-      `
-      SELECT *
-      FROM users
-      WHERE firebase_uid = $1
-      LIMIT 1
-      `,
-
-      [firebaseUid]
-
-    );
-
+async function getUserByFirebaseUid(firebaseUid) {
+  const result = await pool.query(
+    `
+    SELECT
+      u.id,
+      u.firebase_uid,
+      u.organization_id,
+      u.outlet_id,
+      u.full_name,
+      u.email,
+      u.role,
+      u.created_at,
+      o.name AS outlet_name,
+      o.outlet_type,
+      org.name AS organization_name
+    FROM users u
+    LEFT JOIN outlets o
+      ON o.id = u.outlet_id
+    LEFT JOIN organizations org
+      ON org.id = u.organization_id
+    WHERE u.firebase_uid = $1
+    LIMIT 1
+    `,
+    [firebaseUid]
+  );
   return result.rows[0];
 }
 
