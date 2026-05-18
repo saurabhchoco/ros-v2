@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import RootLayout from '../layouts/RootLayout';
+import AdminLayout from '../layouts/AdminLayout';
 import LoginPage from '../pages/LoginPage';
 import KDSScreen from '../pages/KDSScreen';
 import OrdersList from '../pages/OrdersList';
@@ -8,9 +9,12 @@ import Captain from '../pages/Captain';
 import ErrorPage from '../pages/ErrorPage';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import BrandsList from '../pages/admin/BrandsList';
 import CreateBrand from '../pages/admin/CreateBrand';
+import OutletsList from '../pages/admin/OutletsList';
 import CreateOutlet from '../pages/admin/CreateOutlet';
 import CreateManager from '../pages/admin/CreateManager';
+import UsersList from '../pages/admin/UsersList';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -29,38 +33,23 @@ export const router = createBrowserRouter([
       { path: 'reports', element: <Reports /> },
       { path: 'captain', element: <Captain /> },
 
-       // Admin routes — SUPER_ADMIN only
+      // ── ADMIN ROUTES ──────────────────────
       {
         path: 'admin',
         element: (
           <ProtectedRoute roles={['SUPER_ADMIN']}>
-            <AdminDashboard />
+            <AdminLayout />
           </ProtectedRoute>
-        )
-      },
-      {
-        path: 'admin/brands/create',
-        element: (
-          <ProtectedRoute roles={['SUPER_ADMIN']}>
-            <CreateBrand />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: 'admin/outlets/create',
-        element: (
-          <ProtectedRoute roles={['SUPER_ADMIN']}>
-            <CreateOutlet />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: 'admin/managers/create',
-        element: (
-          <ProtectedRoute roles={['SUPER_ADMIN']}>
-            <CreateManager />
-          </ProtectedRoute>
-        )
+        ),
+        children: [
+          { index: true, element: <AdminDashboard /> },
+          { path: 'brands', element: <BrandsList /> },
+          { path: 'brands/create', element: <CreateBrand /> },
+          { path: 'outlets', element: <OutletsList /> },
+          { path: 'outlets/create', element: <CreateOutlet /> },
+          { path: 'managers/create', element: <CreateManager /> },
+          { path: 'users', element: <UsersList /> },
+        ]
       }
     ]
   }
