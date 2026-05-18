@@ -32,6 +32,23 @@ export default function OrderCard({ order, onStatusChange, nextStatus }) {
       </div>
 
       <div className="card-body">
+        <div className="order-meta">
+          {order.tableNumber && (
+            <span className="meta-tag">
+              🪑 Table {order.tableNumber}
+            </span>
+          )}
+          {order.tokenNumber && (
+            <span className="meta-tag">
+              🎫 Token {order.tokenNumber}
+            </span>
+          )}
+          {order.customerName && (
+            <span className="meta-tag">
+              👤 {order.customerName}
+            </span>
+          )}
+        </div>
         <div className="order-source">
           {order.orderSource}
         </div>

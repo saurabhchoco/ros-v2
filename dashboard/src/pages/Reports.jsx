@@ -138,7 +138,12 @@ export default function Reports({ outlet }) {
               <td>{new Date(day.date).toLocaleDateString()}</td>
               <td>{day.totalOrders}</td>
               <td>₹{parseFloat(day.totalRevenue).toFixed(2)}</td>
-              <td>₹{(parseFloat(day.totalRevenue) / day.totalOrders).toFixed(2)}</td>
+              <td>
+                ₹{day.totalOrders > 0
+                  ? (parseFloat(day.totalRevenue) /
+                    day.totalOrders).toFixed(2)
+                  : '0.00'}
+              </td>
               <td>{day.completedOrders}</td>
             </tr>
           ))}

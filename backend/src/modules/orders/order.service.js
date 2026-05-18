@@ -50,6 +50,8 @@ async function createOrder(data) {
         order_no,
         order_source,
         order_status,
+        table_number,
+        token_number,
         customer_name,
         customer_mobile,
         subtotal,
@@ -60,7 +62,7 @@ async function createOrder(data) {
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,
-        $7,$8,$9,$10,$11,$12,$13
+        $7,$8,$9,$10,$11,$12,$13,$14,$15
       )
       RETURNING *
     `;
@@ -72,6 +74,8 @@ async function createOrder(data) {
       orderNo,
       data.orderSource,
       'NEW',
+      data.tableNumber || null,
+      data.tokenNumber || null,
       data.customerName || null,
       data.customerMobile || null,
       subtotal,

@@ -15,6 +15,9 @@ async function pushOrderToKDS(order) {
       outletId: order.outlet_id,
       orderStatus: order.order_status,
       orderSource: order.order_source,
+      tableNumber: order.table_number || null,
+      tokenNumber: order.token_number || null,
+      customerName: order.customer_name || null,
       grandTotal: order.grand_total,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

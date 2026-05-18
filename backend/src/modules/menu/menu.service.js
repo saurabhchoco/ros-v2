@@ -64,7 +64,7 @@ async function listCategories(
         outlet_id = $2
       AND
         is_active = true
-      ORDER BY created_at DESC
+      ORDER BY display_order ASC, name ASC
       `,
 
       [
@@ -126,31 +126,33 @@ async function createMenuItem(
 
 async function listMenuItems(
   organizationId,
-  outletId
+  outletId,
+  categoryId = null
 ) {
+  let query = `
+    SELECT *
+    FROM menu_items
+    WHERE
+      organization_id = $1
+    AND
+      outlet_id = $2
+    AND
+      is_available = true
+  `;
 
-  const result =
-    await pool.query(
+  const params = [organizationId, outletId];
 
-      `
-      SELECT *
-      FROM menu_items
-      WHERE
-        organization_id = $1
-      AND
-        outlet_id = $2
-      AND
-        is_available = true
-      ORDER BY created_at DESC
-      `,
+  if (categoryId) {
+    query += ` AND category_id = $3`;
+    params.push(categoryId);
+  }
 
-      [
-        organizationId,
-        outletId
-      ]
+  query += ` ORDER BY name ASC`;
 
-    );
-
+  const result = await pool.query(
+    query,
+    params
+  );
   return result.rows;
 }
 

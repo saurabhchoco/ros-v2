@@ -17,8 +17,9 @@ const createOrderSchema = z.object({
     'CAPTAIN'
   ]),
 
+  tableNumber: z.string().optional(),
+  tokenNumber: z.string().optional(),
   customerName: z.string().optional(),
-
   customerMobile: z.string().optional(),
 
   items: z.array(

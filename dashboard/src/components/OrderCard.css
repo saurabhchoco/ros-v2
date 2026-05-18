@@ -84,3 +84,19 @@
 .action-button:active {
   transform: scale(0.98);
 }
+
+.order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.meta-tag {
+  background: #f0f0f0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 500;
+}

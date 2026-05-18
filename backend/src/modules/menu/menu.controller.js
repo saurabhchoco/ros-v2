@@ -43,26 +43,27 @@ async function createCategory(
   });
 }
 
-async function listCategories(
-  request,
-  reply
-) {
+async function listCategories(request, reply) {
 
-  const {
-    organizationId,
-    outletId
-  } = request.query;
+  const { organizationId, outletId } =
+    request.query;
 
-  const data =
-    await menuService
-      .listCategories(
-        organizationId,
-        outletId
-      );
+  if (!organizationId || !outletId) {
+    return reply.status(400).send({
+      success: false,
+      message: 'organizationId and outletId are required'
+    });
+  }
+
+  const categories =
+    await menuService.listCategories(
+      organizationId,
+      outletId
+    );
 
   return reply.send({
     success: true,
-    data
+    data: categories
   });
 }
 
@@ -97,26 +98,28 @@ async function createMenuItem(
   });
 }
 
-async function listMenuItems(
-  request,
-  reply
-) {
+async function listMenuItems(request, reply) {
 
-  const {
-    organizationId,
-    outletId
-  } = request.query;
+  const { organizationId, outletId, categoryId } =
+    request.query;
 
-  const data =
-    await menuService
-      .listMenuItems(
-        organizationId,
-        outletId
-      );
+  if (!organizationId || !outletId) {
+    return reply.status(400).send({
+      success: false,
+      message: 'organizationId and outletId are required'
+    });
+  }
+
+  const items =
+    await menuService.listMenuItems(
+      organizationId,
+      outletId,
+      categoryId || null
+    );
 
   return reply.send({
     success: true,
-    data
+    data: items
   });
 }
 

@@ -30,7 +30,15 @@ const app = Fastify({
 app.register(multipart);
 
 app.register(cors, {
-  origin: true
+  origin: true,
+  methods: [
+    'GET',
+    'POST',
+    'PATCH',
+    'PUT',
+    'DELETE',
+    'OPTIONS'
+  ]
 });
 
 app.setErrorHandler(errorHandler);
