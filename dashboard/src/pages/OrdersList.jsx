@@ -1,135 +1,108 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
-import './OrdersList.css';
 
-export default function OrdersList({ outlet }) {
+export default function OrdersList() {
+  const outlet = useAuthStore((s) => s.outlet);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [filter, setFilter] = useState('ALL');
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await apiService.listOrders({ 
-          status: statusFilter || undefined 
-        });
-        setOrders(response.data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
-        alert('Failed to load orders');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!outlet?.organizationId || !outlet?.outletId) {
+      setLoading(false);
+      return;
+    }
 
     fetchOrders();
-  }, [statusFilter]);
+  }, [outlet, filter]);
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return '';
-    return new Date(timestamp).toLocaleString();
-  };
-
-  const handleStatusChange = async (orderId, newStatus) => {
+  const fetchOrders = async () => {
     try {
-      await apiService.updateOrderStatus(orderId, newStatus);
-      // Refresh list
-      const response = await apiService.listOrders({ 
-        status: statusFilter || undefined 
+      setLoading(true);
+      const res = await apiService.listOrders({ 
+        status: filter === 'ALL' ? null : filter 
       });
-      setOrders(response.data.data || []);
+      
+      // Handle both array and object responses
+      const orderList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setOrders(orderList);
     } catch (error) {
-      console.error('Failed to update status:', error);
-      alert('Failed to update order');
-    }
-  };
-
-  const getStatusBadgeColor = (status) => {
-    switch(status) {
-      case 'NEW': return '#ff6b6b';
-      case 'PREPARING': return '#ffd43b';
-      case 'READY': return '#51cf66';
-      case 'COMPLETED': return '#339af0';
-      case 'CANCELLED': return '#a6a6a6';
-      default: return '#868e96';
+      console.error('Failed to fetch orders:', error);
+      setOrders([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="loading">Loading orders...</div>;
+    return <div className="p-8 text-center">Loading orders...</div>;
+  }
+
+  if (!outlet) {
+    return <div className="p-8 text-center text-red-600">No outlet assigned</div>;
   }
 
   return (
-    <div className="orders-container">
-      <div className="orders-header">
-        <h2>Orders</h2>
+    <div className="p-8">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Orders</h2>
         
-        <div className="filter-group">
-          <label>Status Filter:</label>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All</option>
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 mr-3">
+            Filter:
+          </label>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded"
+          >
+            <option value="ALL">All</option>
             <option value="NEW">New</option>
             <option value="PREPARING">Preparing</option>
             <option value="READY">Ready</option>
             <option value="COMPLETED">Completed</option>
-            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
       </div>
 
-      <table className="orders-table">
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Source</th>
-            <th>Time</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Items</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map(order => (
-            <tr key={order.id}>
-              <td><strong>{order.order_no}</strong></td>
-              <td>{order.order_source}</td>
-              <td>{formatDate(order.created_at)}</td>
-              <td>₹{parseFloat(order.grand_total).toFixed(2)}</td>
-              <td>
-                <span 
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusBadgeColor(order.order_status) }}
-                >
-                  {order.order_status}
-                </span>
-              </td>
-              <td>{order.items?.length || 0} items</td>
-              <td>
-                {order.order_status !== 'COMPLETED' && order.order_status !== 'CANCELLED' && (
-                  <button 
-                    className="action-btn"
-                    onClick={() => {
-                      const nextStatus = 
-                        order.order_status === 'NEW' ? 'PREPARING' :
-                        order.order_status === 'PREPARING' ? 'READY' :
-                        order.order_status === 'READY' ? 'COMPLETED' : null;
-                      
-                      if (nextStatus) handleStatusChange(order.id, nextStatus);
-                    }}
-                  >
-                    Next
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {orders.length === 0 && (
-        <div className="empty-state">
+      {orders.length === 0 ? (
+        <div className="text-center text-gray-500 py-12">
           No orders found
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b">
+                <th className="text-left p-3">Order #</th>
+                <th className="text-left p-3">Customer</th>
+                <th className="text-left p-3">Amount</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-left p-3">Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order.id} className="border-b hover:bg-gray-50">
+                  <td className="p-3 font-bold">{order.orderNo}</td>
+                  <td className="p-3">{order.customerName || 'Walk-in'}</td>
+                  <td className="p-3">₹{order.grandTotal || 0}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      order.orderStatus === 'NEW' ? 'bg-blue-100 text-blue-800' :
+                      order.orderStatus === 'PREPARING' ? 'bg-yellow-100 text-yellow-800' :
+                      order.orderStatus === 'READY' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {order.orderStatus}
+                    </span>
+                  </td>
+                  <td className="p-3">{order.items?.length || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

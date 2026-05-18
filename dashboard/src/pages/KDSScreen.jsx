@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { useOrderStore } from '../store/orderStore';
 import { kdsService } from '../services/firebase';
 import { apiService } from '../services/api';
 import OrderCard from '../components/OrderCard';
-import './KDSScreen.css';
 
-export default function KDSScreen({ outlet }) {
-  const [orders, setOrders] = useState([]);
+export default function KDSScreen() {
+  const outlet = useAuthStore((s) => s.outlet);
+  const { orders, setOrders } = useOrderStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Subscribe to real-time updates from Firestore
+    if (!outlet?.organizationId || !outlet?.outletId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     const unsubscribe = kdsService.subscribeToActiveOrders(
       outlet.organizationId,
       outlet.outletId,
@@ -20,88 +27,74 @@ export default function KDSScreen({ outlet }) {
     );
 
     return () => unsubscribe();
-  }, [outlet]);
+  }, [outlet, setOrders]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await apiService.updateOrderStatus(orderId, newStatus);
-      // Firestore listener will update UI automatically
     } catch (error) {
-      console.error('Failed to update status:', error);
-      alert('Failed to update order status');
+      console.error('Failed to update order:', error);
     }
   };
 
-  // Group orders by status
-  const groupedOrders = {
+  const grouped = {
     NEW: orders.filter(o => o.orderStatus === 'NEW'),
     PREPARING: orders.filter(o => o.orderStatus === 'PREPARING'),
     READY: orders.filter(o => o.orderStatus === 'READY')
   };
 
   if (loading) {
-    return <div className="loading">Loading KDS...</div>;
+    return <div className="p-8 text-center">Loading KDS...</div>;
+  }
+
+  if (!outlet) {
+    return <div className="p-8 text-center text-red-600">No outlet assigned</div>;
   }
 
   return (
-    <div className="kds-container">
-      <div className="kds-header">
-        <h2>{outlet.outletName} — Kitchen Display System</h2>
-        <div className="order-count">
-          {orders.length} active orders
-        </div>
+    <div className="p-8">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900">
+          {outlet.outletName || 'Kitchen Display System'}
+        </h2>
+        <p className="text-gray-600 mt-2">{orders.length} active orders</p>
       </div>
 
-      <div className="kanban-board">
-        {/* NEW Column */}
-        <div className="kanban-column new-column">
-          <div className="column-header">
-            <h3>🆕 New Orders</h3>
-            <span className="badge">{groupedOrders.NEW.length}</span>
-          </div>
-          <div className="card-stack">
-            {groupedOrders.NEW.map(order => (
+      <div className="grid grid-cols-3 gap-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-bold mb-4">🆕 New ({grouped.NEW.length})</h3>
+          <div className="space-y-4">
+            {grouped.NEW.map(order => (
               <OrderCard
                 key={order.id}
                 order={order}
                 onStatusChange={handleStatusChange}
-                nextStatus="PREPARING"
               />
             ))}
           </div>
         </div>
 
-        {/* PREPARING Column */}
-        <div className="kanban-column preparing-column">
-          <div className="column-header">
-            <h3>👨‍🍳 Preparing</h3>
-            <span className="badge">{groupedOrders.PREPARING.length}</span>
-          </div>
-          <div className="card-stack">
-            {groupedOrders.PREPARING.map(order => (
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h3 className="text-lg font-bold mb-4">👨‍🍳 Preparing ({grouped.PREPARING.length})</h3>
+          <div className="space-y-4">
+            {grouped.PREPARING.map(order => (
               <OrderCard
                 key={order.id}
                 order={order}
                 onStatusChange={handleStatusChange}
-                nextStatus="READY"
               />
             ))}
           </div>
         </div>
 
-        {/* READY Column */}
-        <div className="kanban-column ready-column">
-          <div className="column-header">
-            <h3>✅ Ready</h3>
-            <span className="badge">{groupedOrders.READY.length}</span>
-          </div>
-          <div className="card-stack">
-            {groupedOrders.READY.map(order => (
+        <div className="bg-green-50 rounded-lg p-4">
+          <h3 className="text-lg font-bold mb-4">✅ Ready ({grouped.READY.length})</h3>
+          <div className="space-y-4">
+            {grouped.READY.map(order => (
               <OrderCard
                 key={order.id}
                 order={order}
                 onStatusChange={handleStatusChange}
-                nextStatus="COMPLETED"
               />
             ))}
           </div>

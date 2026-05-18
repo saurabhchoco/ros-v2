@@ -1,72 +1,27 @@
-import './OrderCard.css';
-
-export default function OrderCard({ order, onStatusChange, nextStatus }) {
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'NEW': return '#ff6b6b';
-      case 'PREPARING': return '#ffd43b';
-      case 'READY': return '#51cf66';
-      case 'COMPLETED': return '#339af0';
-      default: return '#868e96';
-    }
-  };
-
+export default function OrderCard({ order, onStatusChange }) {
   return (
-    <div className="order-card" style={{ borderTopColor: getStatusColor(order.orderStatus) }}>
-      <div className="card-header">
-        <div className="order-number">
-          {order.orderNo}
+    <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p className="font-bold text-gray-900">{order.orderNo}</p>
+          <p className="text-sm text-gray-600">{order.customerName || 'Walk-in'}</p>
         </div>
-        <div className="order-time">
-          {formatTime(order.createdAt)}
-        </div>
+        <span className="text-lg font-bold text-blue-600">₹{order.grandTotal || 0}</span>
+      </div>
+      
+      <div className="text-sm text-gray-700 mb-3 border-t pt-2">
+        {order.items?.length || 0} items
       </div>
 
-      <div className="card-body">
-        <div className="order-meta">
-          {order.tableNumber && (
-            <span className="meta-tag">
-              🪑 Table {order.tableNumber}
-            </span>
-          )}
-          {order.tokenNumber && (
-            <span className="meta-tag">
-              🎫 Token {order.tokenNumber}
-            </span>
-          )}
-          {order.customerName && (
-            <span className="meta-tag">
-              👤 {order.customerName}
-            </span>
-          )}
-        </div>
-        <div className="order-source">
-          {order.orderSource}
-        </div>
-        <div className="order-total">
-          ₹{parseFloat(order.grandTotal).toFixed(2)}
-        </div>
-      </div>
-
-      <div className="card-action">
-        <button 
-          className="action-button"
-          onClick={() => onStatusChange(order.id, nextStatus)}
-        >
-          {nextStatus === 'PREPARING' && 'Start Preparing'}
-          {nextStatus === 'READY' && 'Mark Ready'}
-          {nextStatus === 'COMPLETED' && 'Complete'}
-        </button>
-      </div>
+      <button
+        onClick={() => {
+          const nextStatus = order.orderStatus === 'NEW' ? 'PREPARING' : 'READY';
+          onStatusChange(order.id, nextStatus);
+        }}
+        className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+      >
+        Move to {order.orderStatus === 'NEW' ? 'Preparing' : 'Ready'}
+      </button>
     </div>
   );
 }
