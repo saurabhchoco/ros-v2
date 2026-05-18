@@ -9,6 +9,7 @@ const errorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./modules/users/user.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const orderRoutes = require('./modules/orders/order.routes');
+const reportRoutes = require('./modules/reports/report.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
@@ -66,6 +67,7 @@ app.register(organizationRoutes);
 app.register(outletRoutes);
 app.register(userRoutes);
 app.register(orderRoutes);
+app.register(reportRoutes);
 app.register(menuRoutes);
 app.register(adminRoutes);
 

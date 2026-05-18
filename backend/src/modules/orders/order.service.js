@@ -221,7 +221,97 @@ async function updateOrderStatus(
 
 }
 
+async function listOrders(
+  organizationId,
+  outletId,
+  filters = {}
+) {
+
+  let query = `
+    SELECT o.*, 
+           json_agg(json_build_object(
+             'id', oi.id,
+             'itemName', oi.item_name,
+             'quantity', oi.quantity,
+             'unitPrice', oi.unit_price,
+             'lineTotal', oi.line_total
+           )) as items
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.organization_id = $1
+    AND o.outlet_id = $2
+  `;
+
+  const params = [
+    organizationId,
+    outletId
+  ];
+
+  let paramCount = 2;
+
+  if (filters.status) {
+    paramCount += 1;
+    query += ` AND o.order_status = $${paramCount}`;
+    params.push(filters.status);
+  }
+
+  if (filters.startDate) {
+    paramCount += 1;
+    query += ` AND o.created_at >= $${paramCount}::date`;
+    params.push(filters.startDate);
+  }
+
+  if (filters.endDate) {
+    paramCount += 1;
+    query += ` AND o.created_at < $${paramCount}::date + interval '1 day'`;
+    params.push(filters.endDate);
+  }
+
+  query += ` GROUP BY o.id ORDER BY o.created_at DESC LIMIT 100`;
+
+  const result = await pool.query(query, params);
+
+  return result.rows;
+
+}
+
+async function getOrderById(
+  orderId,
+  organizationId
+) {
+
+  const result = await pool.query(
+    `
+    SELECT o.*, 
+           json_agg(json_build_object(
+             'id', oi.id,
+             'itemName', oi.item_name,
+             'quantity', oi.quantity,
+             'unitPrice', oi.unit_price,
+             'lineTotal', oi.line_total
+           )) as items
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.id = $1
+    AND o.organization_id = $2
+    GROUP BY o.id
+    `,
+    [orderId, organizationId]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error('Order not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return result.rows[0];
+
+}
+
 module.exports = {
   createOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  listOrders,
+  getOrderById
 };

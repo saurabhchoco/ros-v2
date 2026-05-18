@@ -1,0 +1,86 @@
+.order-card {
+  background: white;
+  border-radius: 10px;
+  border-left: 6px solid #667eea;
+  border-top: 4px solid;
+  padding: 1.2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.order-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.order-number {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #333;
+  letter-spacing: 0.5px;
+}
+
+.order-time {
+  background: #f0f0f0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.card-body {
+  margin: 1rem 0;
+  padding: 0.8rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.order-source {
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.order-total {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.card-action {
+  margin-top: 1rem;
+}
+
+.action-button {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  background: #5568d3;
+  transform: scale(1.02);
+}
+
+.action-button:active {
+  transform: scale(0.98);
+}

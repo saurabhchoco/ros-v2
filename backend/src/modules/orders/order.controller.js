@@ -67,7 +67,51 @@ async function updateOrderStatus(
 
 }
 
+async function listOrders(
+  request,
+  reply
+) {
+
+  const { status, startDate, endDate } =
+    request.query;
+
+  const orders =
+    await orderService.listOrders(
+      request.userContext.organization_id,
+      request.userContext.outlet_id,
+      { status, startDate, endDate }
+    );
+
+  return reply.send({
+    success: true,
+    data: orders
+  });
+
+}
+
+async function getOrderById(
+  request,
+  reply
+) {
+
+  const { orderId } = request.params;
+
+  const order =
+    await orderService.getOrderById(
+      orderId,
+      request.userContext.organization_id
+    );
+
+  return reply.send({
+    success: true,
+    data: order
+  });
+
+}
+
 module.exports = {
   createOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  listOrders,
+  getOrderById
 };

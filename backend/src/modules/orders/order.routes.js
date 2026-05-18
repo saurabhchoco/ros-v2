@@ -24,6 +24,28 @@ async function orderRoutes(app) {
     orderController.createOrder
   );
 
+  app.get(
+    '/api/v1/orders',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware
+      ]
+    },
+    orderController.listOrders
+  );
+
+  app.get(
+    '/api/v1/orders/:orderId',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware
+      ]
+    },
+    orderController.getOrderById
+  );
+
   app.patch(
     '/api/v1/orders/:orderId/status',
     {
