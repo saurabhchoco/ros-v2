@@ -38,7 +38,8 @@ app.register(cors, {
     'PUT',
     'DELETE',
     'OPTIONS'
-  ]
+  ],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
 app.setErrorHandler(errorHandler);
