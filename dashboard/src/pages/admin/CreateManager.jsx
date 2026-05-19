@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '../../services/adminApi';
+import { useAuthStore } from '../../store/authStore';
 
 export default function CreateManager() {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ export default function CreateManager() {
   const preselectedOrg = searchParams.get('org') || '';
   const preselectedOutlet = searchParams.get('outlet') || '';
 
+  const outlet = useAuthStore((s) => s.outlet);
   const [brands, setBrands] = useState([]);
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,15 +22,40 @@ export default function CreateManager() {
     password: ''
   });
 
+  // useEffect(() => {
+  //   adminApi.listBrands()
+  //     .then(res => setBrands(res.data.data || []))
+  //     .catch(console.error);
+  // }, []);
+
   useEffect(() => {
-    adminApi.listBrands()
-      .then(res => setBrands(res.data.data || []))
-      .catch(console.error);
-  }, []);
+
+    const orgId =
+      outlet?.organization_id ||
+      outlet?.organizationId;
+
+    if (!orgId) return;
+
+    setBrands([
+      {
+        id: orgId,
+        name:
+          outlet?.name ||
+          'My Brand'
+      }
+    ]);
+
+    setForm(prev => ({
+      ...prev,
+      organizationId: orgId
+    }));
+
+  }, [outlet]);
 
   useEffect(() => {
     if (!form.organizationId) return;
-    adminApi.listOutlets(form.organizationId)
+    // adminApi.listOutlets(form.organizationId)
+    adminApi.listOutlets(null, true)
       .then(res => setOutlets(res.data.data || []))
       .catch(console.error);
   }, [form.organizationId]);
@@ -44,7 +71,7 @@ export default function CreateManager() {
     setError('');
     setLoading(true);
     try {
-      await adminApi.createManager(form);
+      await adminApi.createOutletManager(form);
       navigate('/admin');
     } catch (err) {
       setError(

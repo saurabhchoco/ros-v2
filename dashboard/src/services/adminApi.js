@@ -73,6 +73,14 @@ export const adminApi = {
     );
   },
 
+  async createOutletManager(data) {
+    return axios.post(
+      `${API_URL}/outlets/create-manager`,
+      data,
+      { headers: await getAuthHeaders() }
+    );
+  },
+
   // Users
   async listUsers(organizationId = null) {
     const params = organizationId
@@ -83,6 +91,40 @@ export const adminApi = {
       { headers: await getAuthHeaders() }
     );
   },
+
+  async listManagers() {
+
+    return axios.get(
+
+      `${API_URL}/outlets/managers`,
+
+      {
+        headers:
+          await getAuthHeaders()
+      }
+
+    );
+
+  },
+
+  async createOutletManager(
+  data
+) {
+
+  return axios.post(
+
+    `${API_URL}/outlets/create-manager`,
+
+    data,
+
+    {
+      headers:
+        await getAuthHeaders()
+    }
+
+  );
+
+},
 
   // Menu CSV upload
   async uploadMenuCSV(file, organizationId, outletId) {

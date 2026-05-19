@@ -143,10 +143,49 @@ async function createOutlet(request, reply) {
   });
 }
 
+async function listManagers(
+  request,
+  reply
+) {
+
+  try {
+
+    const organizationId =
+      request.userContext
+        .organization_id;
+
+    const managers =
+      await outletService
+        .listManagers(
+          organizationId
+        );
+
+    return reply.send({
+
+      success: true,
+      data: managers
+
+    });
+
+  } catch (error) {
+
+    return reply.status(500).send({
+
+      success: false,
+      message:
+        error.message
+
+    });
+
+  }
+
+}
+
 module.exports = {
   createOutlet,
   listOutlets,
   createOutletManager,
   listOutletsByOrg,
-  createOutlet
+  createOutlet,
+  listManagers
 };

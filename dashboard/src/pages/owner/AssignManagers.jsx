@@ -16,12 +16,17 @@ export default function AssignManagers() {
     const orgId = outlet?.organization_id || outlet?.organizationId;
     if (!outletId || !orgId) return;
     adminApi
-      .listUsers(outlet.orgId)
+      .listManagers()
       .then((res) => {
-        const mgrs = (res.data.data || []).filter(
-          (u) => u.role === 'OUTLET_MANAGER'
-        );
+
+        const mgrs =
+          (res.data.data || []).filter(
+            (u) =>
+              u.outlet_id === outletId
+          );
+
         setManagers(mgrs);
+
       })
       .catch(console.error)
       .finally(() => setLoading(false));

@@ -67,6 +67,12 @@ async function outletRoutes(app) {
     outletController.createOutlet
   );
 
+  app.get(
+    '/api/v1/outlets/managers',
+    { preHandler: brandOwnerOnly },
+    outletController.listManagers
+  );
+
 }
 
 module.exports = outletRoutes;

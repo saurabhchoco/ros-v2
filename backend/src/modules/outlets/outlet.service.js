@@ -129,8 +129,29 @@ async function createOutletManager(
   return result.rows[0];
 }
 
+async function listManagers(
+  organizationId
+) {
+
+  return User.findAll({
+
+    where: {
+
+      organization_id:
+        organizationId,
+
+      role:
+        'OUTLET_MANAGER'
+
+    }
+
+  });
+
+}
+
 module.exports = {
   createOutlet,
   listOutlets,
-  createOutletManager
+  createOutletManager,
+  listManagers
 };
