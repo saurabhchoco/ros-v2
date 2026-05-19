@@ -40,7 +40,7 @@ export default function CreateManager() {
       {
         id: orgId,
         name:
-          outlet?.name ||
+          outlet?.organization_name ||
           'My Brand'
       }
     ]);
@@ -72,7 +72,7 @@ export default function CreateManager() {
     setLoading(true);
     try {
       await adminApi.createOutletManager(form);
-      navigate('/admin');
+      navigate('/owner');
     } catch (err) {
       setError(
         err.response?.data?.message ||

@@ -50,7 +50,7 @@ export const adminApi = {
 
   async createOutlet(data) {
     return axios.post(
-      `${API_URL}/admin/outlets`,
+      `${API_URL}/outlets`,
       data,
       { headers: await getAuthHeaders() }
     );

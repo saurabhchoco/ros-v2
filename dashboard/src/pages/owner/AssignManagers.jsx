@@ -56,7 +56,7 @@ export default function AssignManagers() {
         <button
             onClick={() =>
                 navigate(
-                `/owner/managers/create?org=${outlet?.organizationId}&outlet=${outletId}`
+                `/owner/managers/create?org=${outlet?.organization_id}&outlet=${outletId}`
                 )
             }
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-semibold hover:bg-indigo-600"

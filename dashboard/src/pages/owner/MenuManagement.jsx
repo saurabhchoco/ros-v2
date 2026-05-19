@@ -17,7 +17,7 @@ export default function MenuManagement() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  // const orgId = outlet?.organizationId || outlet?.organization_id;
+
   const orgId = outlet?.organizationId || outlet?.organization_id || outlet?.organizationId;
 
 
@@ -65,7 +65,7 @@ export default function MenuManagement() {
       try {
         const res =
           await apiService.getMenuItems(
-            outlet.orgId,
+            orgId,
             outletId,
             activeCategory
           );
@@ -82,7 +82,7 @@ const handleCSVUpload = async (e) => {
   if (!file || !outlet) return;
 
   // FIX: Extract orgId properly
-  const orgId = outlet?.organizationId || outlet?.organization_id;
+  // const orgId = outlet?.organizationId || outlet?.organization_id;
   
   if (!orgId) {
     alert('Organization ID not found');
@@ -173,7 +173,7 @@ const handleCSVUpload = async (e) => {
               {item.name}
             </p>
             <p className="text-indigo-500 font-bold">
-              ₹{parseFloat(item.base_price).toFixed(0)}
+              ₹{Number(item.base_price || 0)}
             </p>
             <button
               className="w-full mt-3 text-xs text-indigo-500 hover:text-indigo-700 font-medium"

@@ -236,18 +236,49 @@ async function importMenuCSV(
                   ]
                 );
 
-              if (!categoryResult.rows[0]) {
-                summary.skipped++;
-                summary.skippedRows.push({
-                  row: index + 1,
-                  reason: `Category "${row.category_name}" not found for this outlet`,
-                  data: row
-                });
-                continue;
-              }
+                let categoryId;
 
-              const categoryId =
-                categoryResult.rows[0].id;
+                if (!categoryResult.rows[0]) {
+
+                  const newCategory =
+                    await pool.query(
+
+                      `
+                      INSERT INTO menu_categories (
+                        id,
+                        organization_id,
+                        outlet_id,
+                        name,
+                        created_at,
+                        updated_at
+                      )
+                      VALUES (
+                        $1,$2,$3,$4,NOW(),NOW()
+                      )
+                      RETURNING id
+                      `,
+
+                      [
+                        generateId('cat'),
+                        organizationId,
+                        outletId,
+                        row.category_name
+                      ]
+
+                    );
+
+                  categoryId =
+                    newCategory.rows[0].id;
+
+                } else {
+
+                  categoryId =
+                    categoryResult.rows[0].id;
+
+                }
+
+              // const categoryId =
+              //   categoryResult.rows[0].id;
 
               await pool.query(
                 `
