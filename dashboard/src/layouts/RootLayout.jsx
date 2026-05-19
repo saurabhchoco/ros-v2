@@ -20,14 +20,11 @@ const navItems = [
   { path: '/kds', label: 'KDS Board' },
   { path: '/orders', label: 'Orders' },
   { path: '/reports', label: 'Reports' },
-  { path: '/captain', label: 'Captain' },
-  // Only Super Admin sees this
-  ...(role === 'SUPER_ADMIN'
-    ? [{ path: '/admin', label: '⚙️ Admin' }]
+  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' 
+    ? [{ path: '/captain', label: 'Captain' }] 
     : []),
-  ...(role === 'BRAND_OWNER'
-    ? [{ path: '/owner', label: '🏪 My Outlets' }]
-    : []),
+  ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
+  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' }] : []),
 ];
 
   const isActive = (path) =>

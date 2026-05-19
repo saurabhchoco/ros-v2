@@ -19,43 +19,60 @@ export default function Captain() {
   const [customerMobile, setCustomerMobile] = useState('');
   const [orderSource, setOrderSource] = useState('DINE_IN');
 
-  useEffect(() => {
-    if (!outlet?.organizationId || !outlet?.outletId) return;
+useEffect(() => {
+  // Extract both camelCase and snake_case variations
+  const orgId = outlet?.organizationId || outlet?.organization_id;
+  const outletId = outlet?.outletId || outlet?.outlet_id || outlet?.id;
 
-    const load = async () => {
-      try {
-        const res = await apiService.getCategories(
-          outlet.organizationId,
-          outlet.outletId
-        );
-        const cats = res.data.data || [];
-        setCategories(cats);
-        if (cats.length > 0) setActiveCategory(cats[0].id);
-      } catch (e) {
-        console.error('Failed to load categories', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [outlet]);
+  console.log('Captain - outlet:', outlet);
+  console.log('Captain - orgId:', orgId);
+  console.log('Captain - outletId:', outletId);
 
-  useEffect(() => {
-    if (!activeCategory || !outlet) return;
-    const load = async () => {
-      try {
-        const res = await apiService.getMenuItems(
-          outlet.organizationId,
-          outlet.outletId,
-          activeCategory
-        );
-        setItems(res.data.data || []);
-      } catch (e) {
-        console.error('Failed to load items', e);
-      }
-    };
-    load();
-  }, [activeCategory, outlet]);
+  if (!orgId || !outletId) {
+    console.log('Missing org or outlet ID');
+    setLoading(false);
+    return;
+  }
+
+  const load = async () => {
+    try {
+      console.log('Fetching categories for org:', orgId, 'outlet:', outletId);
+      const res = await apiService.getCategories(orgId, outletId);
+      const cats = res.data.data || [];
+      setCategories(cats);
+      if (cats.length > 0) setActiveCategory(cats[0].id);
+    } catch (e) {
+      console.error('Failed to load categories', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+}, [outlet]);
+
+useEffect(() => {
+  const orgId = outlet?.organizationId || outlet?.organization_id;
+  const outletId = outlet?.outletId || outlet?.outlet_id || outlet?.id;
+
+  if (!activeCategory || !orgId || !outletId) return;
+
+  const load = async () => {
+    try {
+      console.log('Fetching items for category:', activeCategory);
+      const res = await apiService.getMenuItems(
+        orgId,
+        outletId,
+        activeCategory
+      );
+      setItems(res.data.data || []);
+    } catch (e) {
+      console.error('Failed to load items', e);
+    }
+  };
+
+  load();
+}, [activeCategory, outlet]);
 
   const addToCart = (item) => {
     setCart(prev => {
