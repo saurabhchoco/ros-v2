@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
 import { adminApi } from '../../services/adminApi';
 
+
 export default function MenuManagement() {
   const [searchParams] = useSearchParams();
   const outletId = searchParams.get('outlet');
@@ -16,19 +17,32 @@ export default function MenuManagement() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const orgId = outlet?.organizationId || outlet?.organization_id;
+  // const orgId = outlet?.organizationId || outlet?.organization_id;
+  const orgId = outlet?.organizationId || outlet?.organization_id || outlet?.organizationId;
+
 
   useEffect(() => {
 
-    if (!outletId || !orgId) return;
+    console.log('Outlet:', outlet);
+    console.log('Org ID extracted:', orgId);
+
+      if (!outletId || !orgId) {
+        console.log('Missing outlet or org ID');
+        return;
+      }
 
     const load = async () => {
       try {
-        const catRes =
-          await apiService.getCategories(
-            outlet.orgId,
-            outletId
-          );
+      const catRes = await apiService.getCategories(
+        orgId,  // USE orgId, not outlet.organization_id
+        outletId
+      );
+      // try {
+      //   const catRes =
+      //     await apiService.getCategories(
+      //       outlet.orgId,
+      //       outletId
+      //     );
         const cats = catRes.data.data || [];
         setCategories(cats);
         if (cats.length > 0) {
@@ -63,26 +77,33 @@ export default function MenuManagement() {
     load();
   }, [activeCategory, outlet, outletId]);
 
-  const handleCSVUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !outlet) return;
+const handleCSVUpload = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file || !outlet) return;
 
-    setUploading(true);
-    try {
-      await adminApi.uploadMenuCSV(
-        file,
-        outlet.orgId,
-        outletId
-      );
-      alert('Menu uploaded successfully');
-      // Refresh
-      window.location.reload();
-    } catch (err) {
-      alert('Upload failed: ' + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
+  // FIX: Extract orgId properly
+  const orgId = outlet?.organizationId || outlet?.organization_id;
+  
+  if (!orgId) {
+    alert('Organization ID not found');
+    return;
+  }
+
+  setUploading(true);
+  try {
+    await adminApi.uploadMenuCSV(
+      file,
+      orgId,  // USE THE EXTRACTED orgId
+      outletId
+    );
+    alert('Menu uploaded successfully');
+    window.location.reload();
+  } catch (err) {
+    alert('Upload failed: ' + err.message);
+  } finally {
+    setUploading(false);
+  }
+};
 
   if (loading) {
     return (

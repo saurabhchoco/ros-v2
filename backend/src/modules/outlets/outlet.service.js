@@ -129,24 +129,16 @@ async function createOutletManager(
   return result.rows[0];
 }
 
-async function listManagers(
-  organizationId
-) {
-
-  return User.findAll({
-
-    where: {
-
-      organization_id:
-        organizationId,
-
-      role:
-        'OUTLET_MANAGER'
-
-    }
-
-  });
-
+async function listManagers(organizationId) {
+  const result = await pool.query(`
+    SELECT *
+    FROM users
+    WHERE organization_id = $1
+    AND role = 'OUTLET_MANAGER'
+    ORDER BY created_at DESC
+  `, [organizationId]);
+  
+  return result.rows;
 }
 
 module.exports = {

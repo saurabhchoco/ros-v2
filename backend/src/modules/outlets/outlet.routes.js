@@ -2,6 +2,7 @@ const outletController = require('./outlet.controller');
 const authMiddleware = require('../../middleware/authMiddleware');
 const userContextMiddleware = require('../../middleware/userContextMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
+const outletService = require('./outlet.service');
 
 const brandOwnerOnly = [
   authMiddleware,
@@ -52,7 +53,7 @@ async function outletRoutes(app) {
     { preHandler: brandOwnerOnly },
     async (request, reply) => {
       const orgId = request.userContext.organization_id || request.userContext.organizationId;
-      const outlets = await outletController.listOutletsByOrg(orgId);
+      const outlets = await outletService.listOutlets(orgId);
       return reply.send({
         success: true,
         data: outlets

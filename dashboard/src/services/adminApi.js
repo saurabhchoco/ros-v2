@@ -107,25 +107,6 @@ export const adminApi = {
 
   },
 
-  async createOutletManager(
-  data
-) {
-
-  return axios.post(
-
-    `${API_URL}/outlets/create-manager`,
-
-    data,
-
-    {
-      headers:
-        await getAuthHeaders()
-    }
-
-  );
-
-},
-
   // Menu CSV upload
   async uploadMenuCSV(file, organizationId, outletId) {
     const token = await auth.currentUser.getIdToken(true);

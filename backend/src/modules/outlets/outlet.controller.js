@@ -11,6 +11,19 @@ const {
   createOutletManagerSchema
 } = require('./outlet.schema');
 
+// async function createOutlet(request, reply) {
+//   const data = request.body;
+//   data.organizationId = request.userContext.organization_id || request.userContext.organizationId;
+  
+//   const service = require('./outlet.service');
+//   const outlet = await service.createOutlet(data);
+  
+//   return reply.send({
+//     success: true,
+//     data: outlet
+//   });
+// }
+
 async function createOutlet(request, reply) {
 
   const parsed = createOutletSchema.safeParse(
@@ -130,19 +143,6 @@ async function listOutletsByOrg(organizationId) {
   return service.listOutlets(organizationId);
 }
 
-async function createOutlet(request, reply) {
-  const data = request.body;
-  data.organizationId = request.userContext.organization_id || request.userContext.organizationId;
-  
-  const service = require('./outlet.service');
-  const outlet = await service.createOutlet(data);
-  
-  return reply.send({
-    success: true,
-    data: outlet
-  });
-}
-
 async function listManagers(
   request,
   reply
@@ -186,6 +186,5 @@ module.exports = {
   listOutlets,
   createOutletManager,
   listOutletsByOrg,
-  createOutlet,
   listManagers
 };
