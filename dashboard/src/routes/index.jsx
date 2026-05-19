@@ -13,6 +13,13 @@ import CreateOutlet from '../pages/admin/CreateOutlet';
 import CreateManager from '../pages/admin/CreateManager';
 import ProtectedRoute from '../components/ProtectedRoute';
 
+import OutletsList from '../pages/admin/OutletsList';
+
+import BrandOwnerDashboard from '../pages/owner/BrandOwnerDashboard';
+import CreateOwnerOutlet from '../pages/owner/CreateOutlet';
+import MenuManagement from '../pages/owner/MenuManagement';
+import AssignManagers from '../pages/owner/AssignManagers';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -55,13 +62,61 @@ export const router = createBrowserRouter([
         )
       },
       {
+        path: 'admin/outlets',
+        element: (
+          <ProtectedRoute roles={['SUPER_ADMIN']}>
+            <OutletsList />
+          </ProtectedRoute>
+        )
+      },
+      {
         path: 'admin/managers/create',
         element: (
           <ProtectedRoute roles={['SUPER_ADMIN']}>
             <CreateManager />
           </ProtectedRoute>
         )
-      }
+      },
+      {
+        path: 'owner',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <BrandOwnerDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/outlets/create',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <CreateOwnerOutlet />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/menu',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <MenuManagement />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/managers',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <AssignManagers />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/managers/create',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <CreateManager />
+          </ProtectedRoute>
+        )
+      },
     ]
   }
 ]);

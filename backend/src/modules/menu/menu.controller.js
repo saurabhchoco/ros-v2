@@ -178,6 +178,13 @@ async function importCSV(
 
     }
 
+    if (!organizationId || !outletId) {
+      return reply.status(400).send({
+        success: false,
+        message: 'organizationId and outletId are required'
+      });
+    }
+
     if (!fileData) {
 
       return reply.status(400).send({

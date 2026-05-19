@@ -24,7 +24,10 @@ const navItems = [
   // Only Super Admin sees this
   ...(role === 'SUPER_ADMIN'
     ? [{ path: '/admin', label: '⚙️ Admin' }]
-    : [])
+    : []),
+  ...(role === 'BRAND_OWNER'
+    ? [{ path: '/owner', label: '🏪 My Outlets' }]
+    : []),
 ];
 
   const isActive = (path) =>

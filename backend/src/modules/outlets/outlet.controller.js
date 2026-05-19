@@ -125,8 +125,28 @@ async function createOutletManager(
 
 }
 
+async function listOutletsByOrg(organizationId) {
+  const service = require('./outlet.service');
+  return service.listOutlets(organizationId);
+}
+
+async function createOutlet(request, reply) {
+  const data = request.body;
+  data.organizationId = request.userContext.organization_id || request.userContext.organizationId;
+  
+  const service = require('./outlet.service');
+  const outlet = await service.createOutlet(data);
+  
+  return reply.send({
+    success: true,
+    data: outlet
+  });
+}
+
 module.exports = {
   createOutlet,
   listOutlets,
-  createOutletManager
+  createOutletManager,
+  listOutletsByOrg,
+  createOutlet
 };

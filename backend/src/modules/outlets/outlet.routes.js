@@ -1,14 +1,13 @@
-const outletController =
-  require('./outlet.controller');
+const outletController = require('./outlet.controller');
+const authMiddleware = require('../../middleware/authMiddleware');
+const userContextMiddleware = require('../../middleware/userContextMiddleware');
+const roleMiddleware = require('../../middleware/roleMiddleware');
 
-const authMiddleware =
-  require('../../middleware/authMiddleware');
-
-const userContextMiddleware =
-  require('../../middleware/userContextMiddleware');
-
-const roleMiddleware =
-  require('../../middleware/roleMiddleware');
+const brandOwnerOnly = [
+  authMiddleware,
+  userContextMiddleware,
+  roleMiddleware(['BRAND_OWNER'])
+];
 
 async function outletRoutes(app) {
 
@@ -45,6 +44,27 @@ async function outletRoutes(app) {
       ]
     },
     outletController.createOutletManager
+  );
+
+  // Brand Owner — list their own outlets
+  app.get(
+    '/api/v1/outlets/my',
+    { preHandler: brandOwnerOnly },
+    async (request, reply) => {
+      const orgId = request.userContext.organization_id || request.userContext.organizationId;
+      const outlets = await outletController.listOutletsByOrg(orgId);
+      return reply.send({
+        success: true,
+        data: outlets
+      });
+    }
+  );
+
+  // Brand Owner — create outlet
+  app.post(
+    '/api/v1/outlets',
+    { preHandler: brandOwnerOnly },
+    outletController.createOutlet
   );
 
 }

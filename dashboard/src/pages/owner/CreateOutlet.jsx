@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import { adminApi } from '../../services/adminApi';
 
 const OUTLET_TYPES = [
@@ -7,35 +8,21 @@ const OUTLET_TYPES = [
   'QSR',
   'CAFE',
   'BAKERY',
-  'FOOD_COURT',
-  'CLOUD_KITCHEN',
-  'KIOSK',
-  'STREET_FOOD'
 ];
 
 export default function CreateOutlet() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const preselectedOrg =
-    searchParams.get('org') || '';
-
-  const [brands, setBrands] = useState([]);
+  const outlet = useAuthStore((s) => s.outlet);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    organizationId: preselectedOrg,
+    organizationId: outlet?.organization_id || '',
     name: '',
     outletType: 'RESTAURANT'
   });
 
-  useEffect(() => {
-    adminApi.listBrands()
-      .then(res => setBrands(res.data.data || []))
-      .catch(console.error);
-  }, []);
-
   const set = (field) => (e) =>
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       [field]: e.target.value
     }));
@@ -44,13 +31,10 @@ export default function CreateOutlet() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       await adminApi.createOutletAsBrandOwner(form);
-      navigate(
-        preselectedOrg
-          ? `/admin/outlets?org=${preselectedOrg}`
-          : '/admin'
-      );
+      navigate('/owner');
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -63,10 +47,9 @@ export default function CreateOutlet() {
 
   return (
     <div className="p-6 max-w-lg mx-auto">
-
       <button
-        onClick={() => navigate(-1)}
-        className="text-indigo-500 text-sm font-medium mb-6 flex items-center gap-1 hover:underline"
+        onClick={() => navigate('/owner')}
+        className="text-indigo-500 text-sm font-medium mb-6 hover:underline"
       >
         ← Back
       </button>
@@ -77,26 +60,6 @@ export default function CreateOutlet() {
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Brand
-            </label>
-            <select
-              value={form.organizationId}
-              onChange={set('organizationId')}
-              required
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
-            >
-              <option value="">Select brand</option>
-              {brands.map(b => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Outlet Name
@@ -105,7 +68,7 @@ export default function CreateOutlet() {
               type="text"
               value={form.name}
               onChange={set('name')}
-              placeholder="e.g. Bandra West Branch"
+              placeholder="e.g. Downtown Branch"
               required
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
             />
@@ -113,16 +76,16 @@ export default function CreateOutlet() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Outlet Type
+              Type
             </label>
             <select
               value={form.outletType}
               onChange={set('outletType')}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
             >
-              {OUTLET_TYPES.map(t => (
+              {OUTLET_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {t.replace('_', ' ')}
+                  {t}
                 </option>
               ))}
             </select>
@@ -141,7 +104,6 @@ export default function CreateOutlet() {
           >
             {loading ? 'Creating...' : 'Create Outlet'}
           </button>
-
         </form>
       </div>
     </div>

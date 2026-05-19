@@ -33,12 +33,17 @@ export const adminApi = {
   },
 
   // Outlets
-  async listOutlets(organizationId = null) {
-    const params = organizationId
+  async listOutlets(organizationId = null, isBrandOwner = false) {
+    const endpoint = isBrandOwner 
+      ? `${API_URL}/outlets/my`
+      : `${API_URL}/admin/outlets`;
+    
+    const params = !isBrandOwner && organizationId
       ? `?organizationId=${organizationId}`
       : '';
+    
     return axios.get(
-      `${API_URL}/admin/outlets${params}`,
+      `${endpoint}${params}`,
       { headers: await getAuthHeaders() }
     );
   },
@@ -46,6 +51,14 @@ export const adminApi = {
   async createOutlet(data) {
     return axios.post(
       `${API_URL}/admin/outlets`,
+      data,
+      { headers: await getAuthHeaders() }
+    );
+  },
+
+  async createOutletAsBrandOwner(data) {
+    return axios.post(
+      `${API_URL}/outlets`,
       data,
       { headers: await getAuthHeaders() }
     );
