@@ -17,14 +17,20 @@ export default function RootLayout() {
 const role = outlet?.role;
 
 const navItems = [
-  { path: '/kds', label: 'KDS Board' },
-  { path: '/orders', label: 'Orders' },
-  { path: '/reports', label: 'Reports' },
-  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' || role === 'CAPTAIN'
+  // Operational pages: only for outlet staff
+  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' ? [
+    { path: '/kds', label: 'KDS Board' },
+    { path: '/orders', label: 'Orders' },
+    { path: '/reports', label: 'Reports' }
+  ] : []),
+  // Captain page: for captain + managers (order taking)
+  ...(role === 'CAPTAIN' || role === 'OUTLET_MANAGER' || role === 'KITCHEN'
     ? [{ path: '/captain', label: 'Captain' }]
     : []),
+  // Admin (Super Admin only)
   ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
-  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' }] : []),
+  // Brand Owner
+  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' }] : [])
 ];
 
   const isActive = (path) =>

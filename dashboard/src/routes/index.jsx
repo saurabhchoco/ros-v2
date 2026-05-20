@@ -20,6 +20,8 @@ import CreateOwnerOutlet from '../pages/owner/CreateOutlet';
 import MenuManagement from '../pages/owner/MenuManagement';
 import AssignManagers from '../pages/owner/AssignManagers';
 
+import DashboardRedirect from '../components/DashboardRedirect';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -30,10 +32,31 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <KDSScreen /> },
-      { path: 'kds', element: <KDSScreen /> },
-      { path: 'orders', element: <OrdersList /> },
-      { path: 'reports', element: <Reports /> },
+      { index: true, element: <DashboardRedirect /> },
+      {
+        path: 'kds',
+        element: (
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN']}>
+            <KDSScreen />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'orders',
+        element: (
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'BRAND_OWNER']}>
+            <OrdersList />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'reports',
+        element: (
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'BRAND_OWNER']}>
+            <Reports />
+          </ProtectedRoute>
+        )
+      },
       {
         path: 'captain',
         element: (
