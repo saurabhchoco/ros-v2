@@ -3,6 +3,15 @@ import axios from 'axios';
 // Optional: set base URL from environment
 // axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
+// Request interceptor
+axios.interceptors.request.use(
+  (config) => {
+    console.log('[API Request]', config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor
 axios.interceptors.response.use(
   (response) => response,

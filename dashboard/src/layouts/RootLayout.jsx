@@ -59,7 +59,7 @@ const navItems = [
         <div className="flex items-center gap-3">
           {outlet && (
             <span className="text-white/80 text-sm hidden md:block">
-            {outlet.name || 'My Outlet'}
+            {outlet?.outletName || outlet?.name || 'My Outlet'}
             </span>
           )}
           <button
