@@ -32,6 +32,17 @@ async function userContextMiddleware(
       });
 
     }
+    
+    // SUPER_ADMIN bypass – no org/outlet required
+    if (user.role === 'SUPER_ADMIN') {
+      request.userContext = user;
+      return;
+    }
+
+    // For other roles, ensure org_id exists
+    if (!user.organization_id) {
+      return reply.status(401).send({ success: false, message: 'User missing organization' });
+    }
 
     request.userContext = user;
 

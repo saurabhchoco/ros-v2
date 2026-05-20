@@ -1,3 +1,4 @@
+const admin = require('../../config/firebase');
 const {
   createUserSchema
 } = require('./user.schema');

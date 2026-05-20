@@ -85,6 +85,14 @@ export const router = createBrowserRouter([
         )
       },
       {
+        path: 'admin/menu',
+        element: (
+          <ProtectedRoute roles={['SUPER_ADMIN']}>
+            <MenuManagement />
+          </ProtectedRoute>
+        )
+      },
+      {
         path: 'owner',
         element: (
           <ProtectedRoute roles={['BRAND_OWNER']}>

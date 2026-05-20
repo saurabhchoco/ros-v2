@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '../../services/adminApi';
-import { useAuthStore } from '../../store/authStore';
 
 export default function CreateManager() {
   const navigate = useNavigate();
@@ -9,11 +8,10 @@ export default function CreateManager() {
   const preselectedOrg = searchParams.get('org') || '';
   const preselectedOutlet = searchParams.get('outlet') || '';
 
-  const outlet = useAuthStore((s) => s.outlet);
-  const [brands, setBrands] = useState([]);
-  const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [outletName, setOutletName] = useState('');
+  const [brandName, setBrandName] = useState('');
   const [form, setForm] = useState({
     organizationId: preselectedOrg,
     outletId: preselectedOutlet,
@@ -22,49 +20,28 @@ export default function CreateManager() {
     password: ''
   });
 
-  // useEffect(() => {
-  //   adminApi.listBrands()
-  //     .then(res => setBrands(res.data.data || []))
-  //     .catch(console.error);
-  // }, []);
-
+  // Fetch brand and outlet names for display
   useEffect(() => {
-
-    const orgId =
-      outlet?.organization_id ||
-      outlet?.organizationId;
-
-    if (!orgId) return;
-
-    setBrands([
-      {
-        id: orgId,
-        name:
-          outlet?.organization_name ||
-          'My Brand'
-      }
-    ]);
-
-    setForm(prev => ({
-      ...prev,
-      organizationId: orgId
-    }));
-
-  }, [outlet]);
-
-  useEffect(() => {
-    if (!form.organizationId) return;
-    // adminApi.listOutlets(form.organizationId)
-    adminApi.listOutlets(null, true)
-      .then(res => setOutlets(res.data.data || []))
-      .catch(console.error);
-  }, [form.organizationId]);
+    if (preselectedOrg) {
+      adminApi.listBrands()
+        .then(res => {
+          const brand = res.data.data?.find(b => b.id === preselectedOrg);
+          if (brand) setBrandName(brand.name);
+        })
+        .catch(console.error);
+    }
+    if (preselectedOutlet && preselectedOrg) {
+      adminApi.listOutlets(preselectedOrg)
+        .then(res => {
+          const outlet = res.data.data?.find(o => o.id === preselectedOutlet);
+          if (outlet) setOutletName(outlet.name);
+        })
+        .catch(console.error);
+    }
+  }, [preselectedOrg, preselectedOutlet]);
 
   const set = (field) => (e) =>
-    setForm(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,12 +49,10 @@ export default function CreateManager() {
     setLoading(true);
     try {
       await adminApi.createOutletManager(form);
-      navigate('/owner');
+      // Navigate back to outlet list
+      navigate(`/admin/outlets?org=${preselectedOrg}`);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Failed to create manager'
-      );
+      setError(err.response?.data?.message || 'Failed to create manager');
     } finally {
       setLoading(false);
     }
@@ -85,69 +60,39 @@ export default function CreateManager() {
 
   return (
     <div className="p-6 max-w-lg mx-auto">
-
-      <button
-        onClick={() => navigate(-1)}
-        className="text-indigo-500 text-sm font-medium mb-6 flex items-center gap-1 hover:underline"
-      >
+      <button onClick={() => navigate(-1)} className="text-indigo-500 text-sm font-medium mb-6">
         ← Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Add Outlet Manager
-      </h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Add Outlet Manager</h2>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Hidden fields to prevent autofill */}
+          <input type="email" style={{ display: 'none' }} />
+          <input type="password" style={{ display: 'none' }} />
 
+          {/* Brand - show as label when preselected */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Brand
-            </label>
-            <select
-              value={form.organizationId}
-              onChange={set('organizationId')}
-              required
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
-            >
-              <option value="">Select brand</option>
-              {brands.map(b => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+              {brandName || 'Loading...'}
+            </div>
           </div>
 
+          {/* Outlet - show as label */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Outlet
-            </label>
-            <select
-              value={form.outletId}
-              onChange={set('outletId')}
-              required
-              disabled={!form.organizationId}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 disabled:opacity-50"
-            >
-              <option value="">Select outlet</option>
-              {outlets.map(o => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Outlet</label>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+              {outletName || 'Loading...'}
+            </div>
           </div>
 
           <div className="border-t border-gray-100 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-gray-600">
-              Manager Account
-            </p>
+            <p className="text-sm font-semibold text-gray-600">Manager Account</p>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
               <input
                 type="text"
                 value={form.fullName}
@@ -159,23 +104,20 @@ export default function CreateManager() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={set('email')}
                 placeholder="manager@outlet.com"
                 required
+                autoComplete="off"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temporary Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
               <input
                 type="password"
                 value={form.password}
@@ -183,6 +125,7 @@ export default function CreateManager() {
                 placeholder="Min 8 characters"
                 required
                 minLength={8}
+                autoComplete="new-password"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
@@ -201,7 +144,6 @@ export default function CreateManager() {
           >
             {loading ? 'Creating...' : 'Create Manager Account'}
           </button>
-
         </form>
       </div>
     </div>

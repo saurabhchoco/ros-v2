@@ -10,6 +10,8 @@ export default function MenuManagement() {
   const outletIdParam = searchParams.get('outlet');
   const outlet = useAuthStore((s) => s.outlet);
 
+  const orgIdParam = searchParams.get('org'); // for Super Admin override
+
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -17,8 +19,10 @@ export default function MenuManagement() {
   const [uploading, setUploading] = useState(false);
 
   // Get tenant IDs from the logged-in user's outlet
-  const { organizationId, outletId: userOutletId } = getTenantContext(outlet);
+  const { organizationId: userOrgId, outletId: userOutletId } = getTenantContext(outlet);
   // Use URL param if provided (brand owner viewing specific outlet), else user's own outlet
+  const organizationId = userOrgId || orgIdParam;
+  console.log('organizationId:', organizationId, 'userOrgId:', userOrgId, 'orgIdParam:', orgIdParam);
   const targetOutletId = outletIdParam || userOutletId;
 
   // Load categories when organization and target outlet are known

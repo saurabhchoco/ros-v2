@@ -146,9 +146,6 @@ export default function AdminDashboard() {
                   <p className="font-semibold text-gray-800">
                     {brand.name}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {brand.id}
-                  </p>
                 </td>
                 <td className="p-4 text-gray-700">
                   {brand.outlet_count}

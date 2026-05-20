@@ -109,9 +109,6 @@ export default function OutletsList() {
                   <p className="font-semibold text-gray-800">
                     {outlet.name}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {outlet.id}
-                  </p>
                 </td>
                 <td className="p-4 text-gray-700">
                   {outlet.outlet_type
@@ -139,6 +136,13 @@ export default function OutletsList() {
                     className="text-indigo-500 text-sm font-medium hover:underline"
                   >
                     + Manager
+                  </button>
+
+                  <button
+                    onClick={() => navigate(`/admin/menu?outlet=${outlet.id}&org=${outlet.organization_id}`)}
+                    className="text-green-500 text-sm font-medium hover:underline"
+                  >
+                    Menu
                   </button>
                 </td>
               </tr>
