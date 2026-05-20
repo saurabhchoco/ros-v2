@@ -20,8 +20,8 @@ const navItems = [
   { path: '/kds', label: 'KDS Board' },
   { path: '/orders', label: 'Orders' },
   { path: '/reports', label: 'Reports' },
-  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' 
-    ? [{ path: '/captain', label: 'Captain' }] 
+  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' || role === 'CAPTAIN'
+    ? [{ path: '/captain', label: 'Captain' }]
     : []),
   ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
   ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' }] : []),

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { getTenantContext } from '../utils/tenantContext';
+
 
 export default function Captain() {
   const outlet = useAuthStore((s) => s.outlet);
@@ -20,24 +22,20 @@ export default function Captain() {
   const [orderSource, setOrderSource] = useState('DINE_IN');
 
 useEffect(() => {
-  // Extract both camelCase and snake_case variations
-  const orgId = outlet?.organizationId || outlet?.organization_id;
-  const outletId = outlet?.outletId || outlet?.outlet_id || outlet?.id;
-
-  console.log('Captain - outlet:', outlet);
-  console.log('Captain - orgId:', orgId);
-  console.log('Captain - outletId:', outletId);
-
-  if (!orgId || !outletId) {
+  const { organizationId, outletId } = getTenantContext(outlet);
+  if (!organizationId || !outletId) {
     console.log('Missing org or outlet ID');
     setLoading(false);
     return;
   }
 
+  console.log('Captain - orgId:', organizationId);
+  console.log('Captain - outletId:', outletId);
+
   const load = async () => {
     try {
-      console.log('Fetching categories for org:', orgId, 'outlet:', outletId);
-      const res = await apiService.getCategories(orgId, outletId);
+      console.log('Fetching categories for org:', organizationId, 'outlet:', outletId);
+      const res = await apiService.getCategories(organizationId, outletId);
       const cats = res.data.data || [];
       setCategories(cats);
       if (cats.length > 0) setActiveCategory(cats[0].id);
@@ -52,19 +50,13 @@ useEffect(() => {
 }, [outlet]);
 
 useEffect(() => {
-  const orgId = outlet?.organizationId || outlet?.organization_id;
-  const outletId = outlet?.outletId || outlet?.outlet_id || outlet?.id;
-
-  if (!activeCategory || !orgId || !outletId) return;
+  const { organizationId, outletId } = getTenantContext(outlet);
+  if (!activeCategory || !organizationId || !outletId) return;
 
   const load = async () => {
     try {
       console.log('Fetching items for category:', activeCategory);
-      const res = await apiService.getMenuItems(
-        orgId,
-        outletId,
-        activeCategory
-      );
+      const res = await apiService.getMenuItems(organizationId, outletId, activeCategory);
       setItems(res.data.data || []);
     } catch (e) {
       console.error('Failed to load items', e);
@@ -110,36 +102,37 @@ useEffect(() => {
   );
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
-  const handlePlaceOrder = async () => {
-    if (cart.length === 0) return;
-    setPlacing(true);
-    try {
-      const res = await apiService.createOrder({
-        organizationId: outlet.organizationId,
-        outletId: outlet.outletId,
-        orderSource,
-        tableNumber: tableNumber || undefined,
-        tokenNumber: tokenNumber || undefined,
-        customerName: customerName || undefined,
-        customerMobile: customerMobile || undefined,
-        items: cart.map(i => ({
-          itemName: i.name,
-          quantity: i.quantity,
-          unitPrice: parseFloat(i.base_price),
-        })),
-      });
-      setOrderSuccess(res.data.data);
-      setCart([]);
-      setTableNumber('');
-      setTokenNumber('');
-      setCustomerName('');
-      setCustomerMobile('');
-    } catch (e) {
-      alert('Failed to place order. Try again.');
-    } finally {
-      setPlacing(false);
-    }
-  };
+const handlePlaceOrder = async () => {
+  if (cart.length === 0) return;
+  setPlacing(true);
+  try {
+    const { organizationId, outletId } = getTenantContext(outlet);
+    const res = await apiService.createOrder({
+      organizationId,
+      outletId,
+      orderSource,
+      tableNumber: tableNumber || undefined,
+      tokenNumber: tokenNumber || undefined,
+      customerName: customerName || undefined,
+      customerMobile: customerMobile || undefined,
+      items: cart.map(i => ({
+        itemName: i.name,
+        quantity: i.quantity,
+        unitPrice: parseFloat(i.base_price),
+      })),
+    });
+    setOrderSuccess(res.data.data);
+    setCart([]);
+    setTableNumber('');
+    setTokenNumber('');
+    setCustomerName('');
+    setCustomerMobile('');
+  } catch (e) {
+    alert('Failed to place order. Try again.');
+  } finally {
+    setPlacing(false);
+  }
+};
 
   if (!outlet) {
     return (

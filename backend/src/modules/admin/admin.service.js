@@ -83,6 +83,11 @@ async function createBrandOwner(
       data.ownerName, data.ownerEmail
     ]
   );
+  // Claims already set in createFirebaseUser, but ensure they are correct
+  await admin.auth().setCustomUserClaims(firebaseUid, {
+    organizationId: organizationId,
+    role: 'BRAND_OWNER'
+  });
   return result.rows[0];
 }
 
@@ -178,6 +183,12 @@ async function createOutletManager(
       data.fullName, data.email
     ]
   );
+
+    await admin.auth().setCustomUserClaims(firebaseUid, {
+    organizationId: data.organizationId,
+    outletId: data.outletId,
+    role: 'OUTLET_MANAGER'
+  });
   return result.rows[0];
 }
 
@@ -216,16 +227,26 @@ async function listUsers(organizationId) {
 
 // ── Firebase user creation helper ─────────
 
-async function createFirebaseUser(
-  email,
-  password,
-  displayName
-) {
-  return admin.auth().createUser({
+// ── Firebase user creation helper with claims ─────────
+
+async function createFirebaseUser(email, password, displayName, claims = {}) {
+  const userRecord = await admin.auth().createUser({
     email,
     password,
     displayName
   });
+  
+  // Set custom claims if provided
+  if (Object.keys(claims).length > 0) {
+    await admin.auth().setCustomUserClaims(userRecord.uid, claims);
+  }
+  
+  return userRecord;
+}
+
+// ── Function to update claims for existing user ─────────
+async function updateUserClaims(firebaseUid, claims) {
+  await admin.auth().setCustomUserClaims(firebaseUid, claims);
 }
 
 module.exports = {
@@ -237,5 +258,6 @@ module.exports = {
   listOutlets,
   createOutletManager,
   listUsers,
-  createFirebaseUser
+  createFirebaseUser,
+  updateUserClaims
 };

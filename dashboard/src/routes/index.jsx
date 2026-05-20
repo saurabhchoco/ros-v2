@@ -34,7 +34,14 @@ export const router = createBrowserRouter([
       { path: 'kds', element: <KDSScreen /> },
       { path: 'orders', element: <OrdersList /> },
       { path: 'reports', element: <Reports /> },
-      { path: 'captain', element: <Captain /> },
+      {
+        path: 'captain',
+        element: (
+          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'KITCHEN']}>
+            <Captain />
+          </ProtectedRoute>
+        )
+      },
 
        // Admin routes — SUPER_ADMIN only
       {

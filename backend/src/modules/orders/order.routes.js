@@ -1,12 +1,13 @@
 const orderController =
   require('./order.controller');
-
+const syncClaims = 
+  require('../../middleware/syncClaims');
+const roleMiddleware = 
+  require('../../middleware/roleMiddleware');
 const authMiddleware =
   require('../../middleware/authMiddleware');
-
 const userContextMiddleware =
   require('../../middleware/userContextMiddleware');
-
 const orderAccessMiddleware =
   require('../../middleware/orderAccessMiddleware');
 
@@ -18,6 +19,7 @@ async function orderRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
+        roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER']),
         orderAccessMiddleware
       ]
     },

@@ -216,56 +216,34 @@ async function importMenuCSV(
               }
 
               // Tenant-scoped category lookup
-              const categoryResult =
-                await pool.query(
+                const categoryName = row.category_name ? row.category_name.trim() : '';
+
+                const categoryResult = await pool.query(
                   `
                   SELECT id
                   FROM menu_categories
-                  WHERE
-                    name = $1
-                  AND
-                    organization_id = $2
-                  AND
-                    outlet_id = $3
+                  WHERE LOWER(name) = LOWER($1)
+                  AND organization_id = $2
+                  AND outlet_id = $3
                   LIMIT 1
                   `,
-                  [
-                    row.category_name,
-                    organizationId,
-                    outletId
-                  ]
+                  [categoryName, organizationId, outletId]
                 );
 
                 let categoryId;
 
                 if (!categoryResult.rows[0]) {
 
-                  const newCategory =
-                    await pool.query(
-
-                      `
-                      INSERT INTO menu_categories (
-                        id,
-                        organization_id,
-                        outlet_id,
-                        name,
-                        created_at,
-                        updated_at
-                      )
-                      VALUES (
-                        $1,$2,$3,$4,NOW(),NOW()
-                      )
-                      RETURNING id
-                      `,
-
-                      [
-                        generateId('cat'),
-                        organizationId,
-                        outletId,
-                        row.category_name
-                      ]
-
-                    );
+                  const newCategory = await pool.query(
+                    `
+                    INSERT INTO menu_categories (
+                      id, organization_id, outlet_id, name, created_at, updated_at
+                    )
+                    VALUES ($1,$2,$3,$4,NOW(),NOW())
+                    RETURNING id
+                    `,
+                    [generateId('cat'), organizationId, outletId, categoryName]
+                  );
 
                   categoryId =
                     newCategory.rows[0].id;
