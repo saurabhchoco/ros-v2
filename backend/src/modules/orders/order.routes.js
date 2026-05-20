@@ -53,6 +53,7 @@ async function orderRoutes(app) {
     {
       preHandler: [
         authMiddleware,
+        syncClaims,
         userContextMiddleware
       ]
     },
