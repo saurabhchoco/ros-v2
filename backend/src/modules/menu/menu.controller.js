@@ -1,6 +1,7 @@
 const {
   createCategorySchema,
-  createMenuItemSchema
+  createMenuItemSchema,
+  createComboSchema
 } = require('./menu.schema');
 
 const menuService =
@@ -259,10 +260,45 @@ async function importCSV(
 
 }
 
+async function updateMenuItem(request, reply) {
+  const { id } = request.params;
+  const { name, basePrice, description, isVeg, taxPercentage, isAvailable } = request.body;
+  try {
+    const item = await menuService.updateMenuItem(id, {
+      name, basePrice, description, isVeg, taxPercentage, isAvailable
+    }, request.userContext);
+    return reply.send({ success: true, data: item });
+  } catch (err) {
+    return reply.status(400).send({ success: false, message: err.message });
+  }
+}
+
+async function deleteMenuItem(request, reply) {
+  const { id } = request.params;
+  try {
+    await menuService.deleteMenuItem(id, request.userContext);
+    return reply.send({ success: true, message: 'Item deleted' });
+  } catch (err) {
+    return reply.status(400).send({ success: false, message: err.message });
+  }
+}
+
+async function createCombo(request, reply) {
+  const parsed = createComboSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ success: false, error: parsed.error });
+  }
+  const combo = await menuService.createCombo(parsed.data);
+  return reply.send({ success: true, data: combo });
+}
+
 module.exports = {
   createCategory,
   listCategories,
   createMenuItem,
   listMenuItems,
-  importCSV
+  importCSV,
+  updateMenuItem,
+  deleteMenuItem,
+  createCombo
 };

@@ -312,10 +312,64 @@ async function importMenuCSV(
 
 }
 
+async function updateMenuItem(id, updates, userContext) {
+  const { name, basePrice, description, isVeg, taxPercentage, isAvailable } = updates;
+  // Ensure item belongs to same organization
+  const check = await pool.query(
+    `SELECT id FROM menu_items WHERE id = $1 AND organization_id = $2`,
+    [id, userContext.organization_id]
+  );
+  if (check.rows.length === 0) {
+    throw new Error('Item not found or unauthorized');
+  }
+  const result = await pool.query(
+    `UPDATE menu_items
+     SET name = COALESCE($1, name),
+         base_price = COALESCE($2, base_price),
+         description = COALESCE($3, description),
+         is_veg = COALESCE($4, is_veg),
+         tax_percentage = COALESCE($5, tax_percentage),
+         is_available = COALESCE($6, is_available),
+         updated_at = NOW()
+     WHERE id = $7
+     RETURNING *`,
+    [name, basePrice, description, isVeg, taxPercentage, isAvailable, id]
+  );
+  return result.rows[0];
+}
+
+async function deleteMenuItem(id, userContext) {
+  const result = await pool.query(
+    `DELETE FROM menu_items WHERE id = $1 AND organization_id = $2 RETURNING id`,
+    [id, userContext.organization_id]
+  );
+  if (result.rows.length === 0) {
+    throw new Error('Item not found or unauthorized');
+  }
+  return true;
+}
+
+async function createCombo(data) {
+  const id = generateId('itm');
+  const result = await pool.query(
+    `INSERT INTO menu_items (
+      id, organization_id, outlet_id, category_id, name, base_price,
+      tax_percentage, is_veg, is_available, item_type, components
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'COMBO', $10)
+    RETURNING *`,
+    [id, data.organizationId, data.outletId, data.categoryId, data.name,
+     data.basePrice, 0, true, true, JSON.stringify(data.components)]
+  );
+  return result.rows[0];
+}
+
 module.exports = {
   createCategory,
   listCategories,
   createMenuItem,
   listMenuItems,
-  importMenuCSV
+  importMenuCSV,
+  updateMenuItem,
+  deleteMenuItem,
+  createCombo
 };

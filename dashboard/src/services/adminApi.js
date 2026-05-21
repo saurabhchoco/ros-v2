@@ -124,6 +124,10 @@ export const adminApi = {
         }
       }
     );
+  },
+
+  async createCombo(data) {
+    return axios.post(`${API_URL}/menu/combos`, data, { headers: await getAuthHeaders() });
   }
 
 };

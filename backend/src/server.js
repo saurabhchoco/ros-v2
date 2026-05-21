@@ -29,17 +29,92 @@ const app = Fastify({
 
 app.register(multipart);
 
+// app.register(cors, {
+//   // origin: true,
+//   origin: [
+
+//     'http://localhost:5173',
+
+//     /^https:\/\/.*-5173\.app\.github\.dev$/,
+
+//     /^https:\/\/.*-3000\.app\.github\.dev$/,
+
+//   ],
+//   methods: [
+//     'GET',
+//     'POST',
+//     'PATCH',
+//     'PUT',
+//     'DELETE',
+//     'OPTIONS'
+//   ],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true
+// });
+
 app.register(cors, {
-  origin: true,
+
+  origin: (origin, cb) => {
+
+    if (!origin) {
+
+      cb(null, true);
+      return;
+
+    }
+
+    const allowed = [
+
+      /^https:\/\/.*-5173\.app\.github\.dev$/,
+
+      /^https:\/\/.*-3000\.app\.github\.dev$/,
+
+      "http://localhost:5173",
+
+      "http://127.0.0.1:5173"
+
+    ];
+
+    const allowedOrigin =
+      allowed.some((o) => {
+
+        if (o instanceof RegExp) {
+
+          return o.test(origin);
+
+        }
+
+        return o === origin;
+
+      });
+
+    cb(
+      null,
+      allowedOrigin
+    );
+
+  },
+
   methods: [
+
     'GET',
     'POST',
-    'PATCH',
     'PUT',
+    'PATCH',
     'DELETE',
     'OPTIONS'
+
   ],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+
+  credentials: true,
+
+  allowedHeaders: [
+
+    'Authorization',
+    'Content-Type'
+
+  ]
+
 });
 
 app.setErrorHandler(errorHandler);

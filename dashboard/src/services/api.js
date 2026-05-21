@@ -98,4 +98,23 @@ export const apiService = {
     );
   },
 
+  async getBrandAnalytics(period = 'day') {
+    return axios.get(`${API_URL}/brand/analytics?period=${period}`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async getOutletAnalytics(outletId, period = 'day') {
+    return axios.get(`${API_URL}/outlet/analytics?outletId=${outletId}&period=${period}`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async updateMenuItem(id, data) {
+    return axios.put(`${API_URL}/menu/items/${id}`, data, { headers: await getAuthHeaders() });
+  },
+  async deleteMenuItem(id) {
+    return axios.delete(`${API_URL}/menu/items/${id}`, { headers: await getAuthHeaders() });
+  }
+
 };

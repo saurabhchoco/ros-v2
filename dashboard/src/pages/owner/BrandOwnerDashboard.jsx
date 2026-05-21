@@ -97,6 +97,16 @@ useEffect(() => {
               >
                 Managers
               </button>
+                            <button
+                onClick={() =>
+                  navigate(
+                    `/owner/outlet-analytics?outlet=${out.id}`
+                  )
+                }
+                className="flex-1 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
+              >
+                Analytics
+              </button>
             </div>
           </div>
         ))}

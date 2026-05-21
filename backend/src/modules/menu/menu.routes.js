@@ -70,6 +70,42 @@ async function menuRoutes(app) {
     menuController.importCSV
   );
 
+  app.put(
+    '/api/v1/menu/items/:id',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
+      ]
+    },
+    menuController.updateMenuItem
+  );
+
+  app.delete(
+    '/api/v1/menu/items/:id',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
+      ]
+    },
+    menuController.deleteMenuItem
+  );
+
+  app.post(
+    '/api/v1/menu/combos',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])
+      ]
+    },
+    menuController.createCombo
+  );
+
 }
 
 module.exports =

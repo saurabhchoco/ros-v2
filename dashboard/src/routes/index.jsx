@@ -22,6 +22,9 @@ import AssignManagers from '../pages/owner/AssignManagers';
 
 import DashboardRedirect from '../components/DashboardRedirect';
 
+import BrandAnalytics from '../pages/owner/BrandAnalytics';
+import OutletAnalytics from '../pages/owner/OutletAnalytics';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -155,6 +158,22 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
+      {
+        path: 'owner/analytics',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <BrandAnalytics />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/outlet-analytics',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <OutletAnalytics />
+          </ProtectedRoute>
+        )
+      }
     ]
   }
 ]);

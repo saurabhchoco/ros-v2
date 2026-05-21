@@ -30,7 +30,9 @@ const navItems = [
   // Admin (Super Admin only)
   ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
   // Brand Owner
-  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' }] : [])
+  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' },
+    { path: '/owner/analytics', label: '📊 Analytics' }
+  ] : [])
 ];
 
   const isActive = (path) =>
