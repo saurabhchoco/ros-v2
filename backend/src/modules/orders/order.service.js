@@ -314,22 +314,55 @@ async function getOrderById(
 }
 
 async function generateToken(outletId) {
-  const today = new Date().toISOString().slice(0,10);
-  const result = await pool.query(
-    `SELECT token_number FROM orders 
-     WHERE outlet_id = $1 AND DATE(created_at) = $2
-     ORDER BY token_number DESC LIMIT 1`,
-    [outletId, today]
-  );
-  let lastNum = 0;
-  if (result.rows[0] && result.rows[0].token_number) {
-    const match = result.rows[0].token_number.match(/\d+/);
-    if (match) lastNum = parseInt(match[0]);
+  const client = await pool.connect();
+  const today = new Date().toISOString().slice(0, 10);
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Ensure counter exists and reset date is current
+    await client.query(
+      `INSERT INTO outlet_counter (outlet_id, current_number, last_reset)
+       VALUES ($1, 0, $2)
+       ON CONFLICT (outlet_id) DO UPDATE
+       SET current_number = CASE 
+         WHEN outlet_counter.last_reset < $2 THEN 0 
+         ELSE outlet_counter.current_number 
+       END,
+       last_reset = $2
+       WHERE outlet_counter.outlet_id = $1`,
+      [outletId, today]
+    );
+    
+    // Lock the row and increment
+    const result = await client.query(
+      `UPDATE outlet_counter 
+       SET current_number = current_number + 1
+       WHERE outlet_id = $1
+       RETURNING current_number`,
+      [outletId]
+    );
+    
+    const newNumber = result.rows[0].current_number;
+    
+    await client.query('COMMIT');
+    
+    // Get token prefix from outlet
+    const prefixRes = await pool.query(
+      `SELECT token_prefix FROM outlets WHERE id = $1`,
+      [outletId]
+    );
+    const prefix = prefixRes.rows[0]?.token_prefix || 'A';
+    
+    return `${prefix}${newNumber.toString().padStart(3, '0')}`;
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Token generation error:', error);
+    throw error;
+  } finally {
+    client.release();
   }
-  const newNum = lastNum + 1;
-  const prefixRes = await pool.query(`SELECT token_prefix FROM outlets WHERE id = $1`, [outletId]);
-  const prefix = prefixRes.rows[0]?.token_prefix || 'A';
-  return `${prefix}${newNum.toString().padStart(3, '0')}`;
 }
 
 module.exports = {

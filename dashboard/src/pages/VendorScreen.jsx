@@ -15,14 +15,23 @@ export default function VendorScreen() {
   const [loading, setLoading] = useState(true);
   const [firebaseReady, setFirebaseReady] = useState(false);
 
-  useSoundAlert(orders); // ← One line added
+  useSoundAlert(orders);
 
-  // Check stored PIN on load
+  // Auto-login using stored Firebase token (not PIN)
   useEffect(() => {
-    const savedPin = localStorage.getItem(`vendor_pin_${outletId}`);
-    if (savedPin) {
-      setPin(savedPin);
-      handleLogin(savedPin);
+    const savedToken = localStorage.getItem(`vendor_token_${outletId}`);
+    if (savedToken) {
+      signInWithCustomToken(auth, savedToken)
+        .then(() => {
+          setAuthenticated(true);
+          setFirebaseReady(true);
+          // Optionally fetch outlet details from token or backend
+          setLoading(false);
+        })
+        .catch(() => {
+          localStorage.removeItem(`vendor_token_${outletId}`);
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
@@ -33,16 +42,15 @@ export default function VendorScreen() {
       alert('Please enter PIN');
       return;
     }
-    
     setLoading(true);
     try {
       const res = await apiService.vendorAuth(outletId, inputPin);
       if (res.data.success) {
-        // Sign in to Firebase with custom token
+        // Store only the Firebase custom token, not the PIN
+        localStorage.setItem(`vendor_token_${outletId}`, res.data.firebaseToken);
         await signInWithCustomToken(auth, res.data.firebaseToken);
         setAuthenticated(true);
         setOutlet(res.data.outlet);
-        localStorage.setItem(`vendor_pin_${outletId}`, inputPin);
         setFirebaseReady(true);
       } else {
         alert('Invalid PIN');
@@ -51,11 +59,12 @@ export default function VendorScreen() {
       console.error('Auth error:', err);
       alert('Authentication failed: ' + (err.response?.data?.message || err.message));
     } finally {
+      setPin('');
       setLoading(false);
     }
   };
 
-  // Firestore real‑time listener for active orders (only after Firebase auth is ready)
+  // Firestore real‑time listener for active orders
   useEffect(() => {
     if (!firebaseReady || !authenticated) return;
     
@@ -78,19 +87,17 @@ export default function VendorScreen() {
     return () => unsubscribe();
   }, [firebaseReady, authenticated, outletId]);
 
-const markReady = async (orderId) => {
-  try {
-    await updateDoc(doc(db, 'active_orders', orderId), { 
-      status: 'READY',
-      updatedAt: new Date().toISOString()
-    });
-    // Comment out backend call for now
-    // await apiService.updateOrderStatus(orderId, 'READY');
-  } catch (err) {
-    console.error('Failed to mark ready:', err);
-    alert('Failed to update order status');
-  }
-};
+  const markReady = async (orderId) => {
+    try {
+      await updateDoc(doc(db, 'active_orders', orderId), { 
+        status: 'READY',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('Failed to mark ready:', err);
+      alert('Failed to update order status');
+    }
+  };
 
   if (loading) {
     return <div className="p-6 text-center">Loading...</div>;

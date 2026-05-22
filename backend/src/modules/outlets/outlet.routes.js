@@ -5,6 +5,7 @@ const roleMiddleware = require('../../middleware/roleMiddleware');
 const outletService = require('./outlet.service');
 const pool = require('../../config/db');
 const admin = require('../../config/firebase');
+const bcrypt = require('bcryptjs');
 
 const brandOwnerOnly = [
   authMiddleware,
@@ -82,26 +83,60 @@ app.post('/api/v1/vendor/auth', async (request, reply) => {
   if (!outletId || !pin) {
     return reply.status(400).send({ success: false, message: 'Missing outletId or pin' });
   }
+
   try {
-    const result = await pool.query(
-      `SELECT id, name, token_prefix, organization_id FROM outlets WHERE id = $1 AND vendor_pin = $2`,
-      [outletId, pin]
+    // Fetch outlet with hash and lock info
+    const outletRes = await pool.query(
+      `SELECT id, name, token_prefix, organization_id, vendor_pin_hash, failed_attempts, locked_until
+       FROM outlets WHERE id = $1`,
+      [outletId]
     );
-    if (result.rows.length === 0) {
+    if (outletRes.rows.length === 0) {
+      return reply.status(404).send({ success: false, message: 'Outlet not found' });
+    }
+    const outlet = outletRes.rows[0];
+
+    // Check if locked
+    if (outlet.failed_attempts >= 5) {
+      const now = new Date();
+      if (outlet.locked_until && new Date(outlet.locked_until) > now) {
+        const remaining = Math.ceil((new Date(outlet.locked_until) - now) / 60000);
+        return reply.status(429).send({
+          success: false,
+          message: `Too many failed attempts. Locked for ${remaining} minutes.`
+        });
+      }
+    }
+
+    // Verify PIN
+    const isValid = await bcrypt.compare(pin, outlet.vendor_pin_hash);
+    if (!isValid) {
+      // Increment failed attempts and lock if needed
+      await pool.query(
+        `UPDATE outlets SET failed_attempts = failed_attempts + 1,
+         locked_until = CASE WHEN failed_attempts + 1 >= 5 THEN NOW() + INTERVAL '15 minutes' ELSE locked_until END
+         WHERE id = $1`,
+        [outletId]
+      );
       return reply.status(401).send({ success: false, message: 'Invalid PIN' });
     }
-    
-    const outlet = result.rows[0];
-    
-    // Create Firebase custom token with outlet claims
-    const customToken = await admin.auth().createCustomToken(outlet.id, {
+
+    // Reset failed attempts on success
+    await pool.query(
+      `UPDATE outlets SET failed_attempts = 0, locked_until = NULL WHERE id = $1`,
+      [outletId]
+    );
+
+    // Create Firebase custom token (valid 24h)
+    const admin = require('../../config/firebase');
+    const customToken = await admin.auth().createCustomToken(`vendor_${outlet.id}`, {
       outletId: outlet.id,
       organizationId: outlet.organization_id,
       role: 'VENDOR'
     });
-    
-    return reply.send({ 
-      success: true, 
+
+    return reply.send({
+      success: true,
       outlet: { id: outlet.id, name: outlet.name, token_prefix: outlet.token_prefix },
       firebaseToken: customToken
     });

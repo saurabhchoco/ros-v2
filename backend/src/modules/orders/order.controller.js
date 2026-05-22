@@ -120,14 +120,13 @@ async function createPublicOrder(request, reply) {
   const admin = require('../../config/firebase');
   const orderService = require('./order.service');
 
-  // Manual validation with Zod
+  // ✅ Updated schema – NO price, only menuItemId
   const publicOrderSchema = z.object({
     outletId: z.string(),
     organizationId: z.string(),
     items: z.array(z.object({
-      itemName: z.string(),
-      quantity: z.number().positive(),
-      unitPrice: z.number().positive()
+      menuItemId: z.string(),      // ← Only ID sent from frontend
+      quantity: z.number().positive()
     })),
     customerName: z.string().optional(),
     customerMobile: z.string().optional(),
@@ -143,54 +142,108 @@ async function createPublicOrder(request, reply) {
     });
   }
 
-  // ✅ Use result.data, NOT request.body again
   const { outletId, organizationId, items, customerName, customerMobile, paymentProof } = result.data;
   
-  // Generate token
+  // ✅ STEP 1: Generate token
   const token = await orderService.generateToken(outletId);
   
-  // Calculate totals
+  // ✅ STEP 2: Fetch prices from database for each item
   let subtotal = 0;
-  for (const item of items) subtotal += item.quantity * item.unitPrice;
-  const taxAmount = 0;
-  const grandTotal = subtotal;
+  const validatedItems = [];
+
+  for (const item of items) {
+    // Query database for the actual price
+    const menuItemResult = await pool.query(
+      `SELECT id, name, base_price, organization_id, outlet_id
+       FROM menu_items
+       WHERE id = $1 
+         AND organization_id = $2 
+         AND outlet_id = $3
+         AND is_available = true`,
+      [item.menuItemId, organizationId, outletId]
+    );
+    
+    // If item not found or not available for this outlet
+    if (menuItemResult.rows.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        message: `Item ${item.menuItemId} not found or not available for this outlet`
+      });
+    }
+    
+    const dbItem = menuItemResult.rows[0];
+    const lineTotal = item.quantity * dbItem.base_price;
+    subtotal += lineTotal;
+    
+    // Store validated item with database price (NOT from frontend)
+    validatedItems.push({
+      menuItemId: item.menuItemId,
+      itemName: dbItem.name,
+      quantity: item.quantity,
+      unitPrice: dbItem.base_price,  // ← From database, NOT frontend
+      lineTotal: lineTotal
+    });
+  }
   
-  // Insert order
+  const taxAmount = 0;
+  const discountAmount = 0;
+  const grandTotal = subtotal + taxAmount - discountAmount;
+  
+  // ✅ STEP 3: Insert order using validated data
   const orderId = generateId('ord');
   const orderNo = `QR-${Date.now()}`;
+  
   await pool.query(
-    `INSERT INTO orders (id, organization_id, outlet_id, order_no, order_source, order_status,
-      customer_name, customer_mobile, subtotal, tax_amount, grand_total, payment_status, token_number, source)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PUBLIC_QR')`,
-    [orderId, organizationId, outletId, orderNo, 'PUBLIC_QR', 'NEW',
-     customerName, customerMobile, subtotal, taxAmount, grandTotal, 'PENDING_PROOF', token]
+    `INSERT INTO orders (
+      id, organization_id, outlet_id, order_no, order_source, order_status,
+      customer_name, customer_mobile, subtotal, tax_amount, discount_amount, 
+      grand_total, payment_status, token_number, source, created_at, updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())`,
+    [
+      orderId, organizationId, outletId, orderNo, 'PUBLIC_QR', 'NEW',
+      customerName || null, customerMobile || null, subtotal, taxAmount, discountAmount,
+      grandTotal, paymentProof ? 'PENDING_PROOF' : 'PENDING', token, 'PUBLIC_QR'
+    ]
   );
   
-  // Insert order items
-  for (const item of items) {
+  // ✅ STEP 4: Insert order items using validated items (NOT from frontend)
+  for (const item of validatedItems) {
     await pool.query(
-      `INSERT INTO order_items (id, order_id, item_name, quantity, unit_price, line_total)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [generateId('itm'), orderId, item.itemName, item.quantity, item.unitPrice, item.quantity * item.unitPrice]
+      `INSERT INTO order_items (
+        id, order_id, menu_item_id, item_name, quantity, unit_price, line_total, created_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [
+        generateId('itm'), 
+        orderId, 
+        item.menuItemId, 
+        item.itemName, 
+        item.quantity, 
+        item.unitPrice,   // ← From database
+        item.lineTotal
+      ]
     );
   }
   
-  // Push to Firestore active_orders
+  // ✅ STEP 5: Push to Firestore for real-time vendor update
   const orderData = {
     id: orderId,
     orderNo,
     token,
-    items: items.map(i => `${i.quantity}x ${i.itemName}`).join(', '),
+    items: validatedItems.map(i => `${i.quantity}x ${i.itemName}`).join(', '),
     grandTotal,
     status: 'NEW',
     outletId,
     createdAt: new Date().toISOString()
   };
+  
   await admin.firestore().collection('active_orders').doc(orderId).set(orderData);
   
-  // Estimate wait time
+  // ✅ STEP 6: Estimate wait time
   const pendingCount = await pool.query(
-    `SELECT COUNT(*) FROM orders WHERE outlet_id = $1 AND order_status IN ('NEW','PREPARING')`,
+    `SELECT COUNT(*) FROM orders 
+     WHERE outlet_id = $1 AND order_status IN ('NEW', 'PREPARING')`,
     [outletId]
   );
   const waitMinutes = Math.max(2, Math.ceil(pendingCount.rows[0].count * 1.5));

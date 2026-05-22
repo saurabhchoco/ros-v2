@@ -5,42 +5,60 @@ import { apiService } from '../services/api';
 export default function PublicOrder() {
   const { outletId } = useParams();
   const navigate = useNavigate();
-  const [menu, setMenu] = useState({ categories: [], items: [] });
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState({ name: '', mobile: '' });
   const [paymentProof, setPaymentProof] = useState(null);
   const [orderPlaced, setOrderPlaced] = useState(null);
   const [loading, setLoading] = useState(true);
   const [organizationId, setOrganizationId] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [itemsByCategory, setItemsByCategory] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
+  // Fetch menu data
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        // Get outlet info to fetch organizationId
+        // Get outlet info
         const outletRes = await apiService.getPublicOutlet(outletId);
         const orgId = outletRes.data.data.organization_id;
         setOrganizationId(orgId);
-        
-        // Fetch categories using public endpoint
+
+        // Fetch categories
         const categoriesRes = await apiService.getPublicCategories(orgId, outletId);
         const cats = categoriesRes.data.data || [];
-        
-        if (cats.length > 0) {
-          // Fetch items for first category using public endpoint
-          const itemsRes = await apiService.getPublicMenuItems(orgId, outletId, cats[0].id);
-          setMenu({ categories: cats, items: itemsRes.data.data || [] });
-        } else {
-          setMenu({ categories: [], items: [] });
+        setCategories(cats);
+
+        if (cats.length === 0) {
+          setItemsByCategory([]);
+          setLoading(false);
+          return;
         }
+
+        // Fetch items for each category in parallel
+        const itemPromises = cats.map(cat =>
+          apiService.getPublicMenuItems(orgId, outletId, cat.id)
+            .then(res => ({ categoryId: cat.id, items: res.data.data || [] }))
+        );
+        const itemsWithCat = await Promise.all(itemPromises);
+        setItemsByCategory(itemsWithCat);
+
+        // Select first category by default
+        setSelectedCategoryId(cats[0].id);
       } catch (err) {
         console.error('Failed to load menu:', err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchMenu();
   }, [outletId]);
 
+  // Get items for the currently selected category
+  const currentItems = itemsByCategory.find(cat => cat.categoryId === selectedCategoryId)?.items || [];
+
+  // Cart functions
   const addToCart = (item) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
@@ -64,32 +82,23 @@ export default function PublicOrder() {
 
   const total = cart.reduce((sum, i) => sum + Number(i.base_price) * i.qty, 0);
 
-  const toBase64 = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
       alert('Please add items to cart');
       return;
     }
-    
+
     const orderData = {
       outletId,
       organizationId,
-      items: cart.map(i => ({ 
-        itemName: i.name, 
-        quantity: i.qty, 
-        unitPrice: Number(i.base_price) 
+      items: cart.map(i => ({
+        menuItemId: i.id,
+        quantity: i.qty
       })),
-      customerName: customer.name || undefined,
-      customerMobile: customer.mobile || undefined,
-      paymentProof: paymentProof ? await toBase64(paymentProof) : undefined
+      customerName: customer.name,
+      customerMobile: customer.mobile
     };
-    
+
     try {
       const res = await apiService.createPublicOrder(orderData);
       setOrderPlaced(res.data.data);
@@ -112,8 +121,8 @@ export default function PublicOrder() {
         <h2 className="text-2xl font-bold text-green-600">✅ Order Placed!</h2>
         <p className="text-lg mt-2">Token: <strong>{orderPlaced.token}</strong></p>
         <p>Estimated wait: {orderPlaced.waitMinutes} minutes</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="mt-4 bg-indigo-500 text-white px-4 py-2 rounded"
         >
           New Order
@@ -125,22 +134,29 @@ export default function PublicOrder() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <h1 className="text-2xl font-bold mb-4">🍽️ Menu</h1>
-      
+
       {/* Category Tabs */}
-      <div className="flex gap-2 overflow-x-auto mb-4 pb-2">
-        {menu.categories.map(cat => (
-          <button 
-            key={cat.id} 
-            className="px-3 py-1 bg-gray-100 rounded-full whitespace-nowrap text-sm"
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-      
-      {/* Menu Items */}
+      {categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto mb-4 pb-2">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryId(cat.id)}
+              className={`px-3 py-1 rounded-full whitespace-nowrap text-sm transition ${
+                selectedCategoryId === cat.id
+                  ? 'bg-indigo-500 text-white'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Menu Items for Selected Category */}
       <div className="space-y-2 mb-6">
-        {menu.items.map(item => {
+        {currentItems.map(item => {
           const cartItem = cart.find(i => i.id === item.id);
           return (
             <div key={item.id} className="flex justify-between items-center border-b pb-2">
@@ -150,16 +166,16 @@ export default function PublicOrder() {
               </div>
               <div className="flex items-center gap-2">
                 {cartItem?.qty > 0 && (
-                  <button 
-                    onClick={() => removeFromCart(item.id)} 
+                  <button
+                    onClick={() => removeFromCart(item.id)}
                     className="w-7 h-7 bg-red-500 text-white rounded-full font-bold"
                   >
                     -
                   </button>
                 )}
                 <span className="w-6 text-center font-medium">{cartItem?.qty || 0}</span>
-                <button 
-                  onClick={() => addToCart(item)} 
+                <button
+                  onClick={() => addToCart(item)}
                   className="w-7 h-7 bg-green-500 text-white rounded-full font-bold"
                 >
                   +
@@ -168,8 +184,13 @@ export default function PublicOrder() {
             </div>
           );
         })}
+        {currentItems.length === 0 && (
+          <div className="text-center text-gray-400 py-4">
+            No items in this category
+          </div>
+        )}
       </div>
-      
+
       {/* Order Summary */}
       {cart.length > 0 && (
         <div className="border-t pt-4">
@@ -177,54 +198,48 @@ export default function PublicOrder() {
             <span>Total</span>
             <span>₹{total.toFixed(0)}</span>
           </div>
-          
-          <input 
-            type="text" 
-            placeholder="Your Name (optional)" 
-            className="w-full border p-2 rounded mb-2" 
-            value={customer.name} 
-            onChange={e => setCustomer({...customer, name: e.target.value})} 
+
+          <input
+            type="text"
+            placeholder="Your Name (optional)"
+            className="w-full border p-2 rounded mb-2"
+            value={customer.name}
+            onChange={e => setCustomer({ ...customer, name: e.target.value })}
           />
-          
-          <input 
-            type="tel" 
-            placeholder="Mobile (optional)" 
-            className="w-full border p-2 rounded mb-2" 
-            value={customer.mobile} 
-            onChange={e => setCustomer({...customer, mobile: e.target.value})} 
+
+          <input
+            type="tel"
+            placeholder="Mobile (optional)"
+            className="w-full border p-2 rounded mb-2"
+            value={customer.mobile}
+            onChange={e => setCustomer({ ...customer, mobile: e.target.value })}
           />
-          
+
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Scan UPI QR & Upload Screenshot
             </label>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment" 
-              onChange={e => setPaymentProof(e.target.files[0])} 
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={e => setPaymentProof(e.target.files[0])}
               className="w-full text-sm"
             />
           </div>
-          
-          <button 
-            onClick={handlePlaceOrder} 
+
+          <button
+            onClick={handlePlaceOrder}
             className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg"
           >
             Place Order
           </button>
         </div>
       )}
-      
-      {cart.length === 0 && menu.items.length > 0 && (
+
+      {cart.length === 0 && currentItems.length > 0 && (
         <div className="text-center text-gray-400 py-8">
           Add items from the menu above
-        </div>
-      )}
-      
-      {menu.items.length === 0 && (
-        <div className="text-center text-gray-400 py-8">
-          No items available
         </div>
       )}
     </div>
