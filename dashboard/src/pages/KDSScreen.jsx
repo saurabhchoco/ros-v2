@@ -4,12 +4,15 @@ import { useOrderStore } from '../store/orderStore';
 import { kdsService } from '../services/firebase';
 import { apiService } from '../services/api';
 import OrderCard from '../components/OrderCard';
+import { useSoundAlert } from '../hooks/useSoundAlert';
 
 export default function KDSScreen() {
   const outlet = useAuthStore((s) => s.outlet);
   const { orders, setOrders } = useOrderStore();
   const [loading, setLoading] = useState(true);
-
+  
+  useSoundAlert(orders);
+  
   useEffect(() => {
     if (!outlet?.organizationId || !outlet?.outletId) {
       setLoading(false);

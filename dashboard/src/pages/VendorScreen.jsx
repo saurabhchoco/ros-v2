@@ -1,0 +1,177 @@
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { db, auth } from '../config/firebase';
+import { signInWithCustomToken } from 'firebase/auth';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { apiService } from '../services/api';
+import { useSoundAlert } from '../hooks/useSoundAlert';
+
+export default function VendorScreen() {
+  const { outletId } = useParams();
+  const [authenticated, setAuthenticated] = useState(false);
+  const [pin, setPin] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [outlet, setOutlet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [firebaseReady, setFirebaseReady] = useState(false);
+
+  useSoundAlert(orders); // ← One line added
+
+  // Check stored PIN on load
+  useEffect(() => {
+    const savedPin = localStorage.getItem(`vendor_pin_${outletId}`);
+    if (savedPin) {
+      setPin(savedPin);
+      handleLogin(savedPin);
+    } else {
+      setLoading(false);
+    }
+  }, [outletId]);
+
+  const handleLogin = async (inputPin = pin) => {
+    if (!inputPin) {
+      alert('Please enter PIN');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await apiService.vendorAuth(outletId, inputPin);
+      if (res.data.success) {
+        // Sign in to Firebase with custom token
+        await signInWithCustomToken(auth, res.data.firebaseToken);
+        setAuthenticated(true);
+        setOutlet(res.data.outlet);
+        localStorage.setItem(`vendor_pin_${outletId}`, inputPin);
+        setFirebaseReady(true);
+      } else {
+        alert('Invalid PIN');
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      alert('Authentication failed: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Firestore real‑time listener for active orders (only after Firebase auth is ready)
+  useEffect(() => {
+    if (!firebaseReady || !authenticated) return;
+    
+    const q = query(
+      collection(db, 'active_orders'), 
+      where('outletId', '==', outletId)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        status: doc.data().status || 'NEW'
+      }));
+      setOrders(ordersData);
+    }, (error) => {
+      console.error('Firestore error:', error);
+    });
+    
+    return () => unsubscribe();
+  }, [firebaseReady, authenticated, outletId]);
+
+const markReady = async (orderId) => {
+  try {
+    await updateDoc(doc(db, 'active_orders', orderId), { 
+      status: 'READY',
+      updatedAt: new Date().toISOString()
+    });
+    // Comment out backend call for now
+    // await apiService.updateOrderStatus(orderId, 'READY');
+  } catch (err) {
+    console.error('Failed to mark ready:', err);
+    alert('Failed to update order status');
+  }
+};
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading...</div>;
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+          <h2 className="text-2xl font-bold text-center mb-6">🔐 Vendor Login</h2>
+          <input 
+            type="password" 
+            placeholder="Enter 4-digit PIN" 
+            value={pin} 
+            onChange={e => setPin(e.target.value)}
+            className="w-full border border-gray-300 p-3 rounded-lg mb-4 text-center text-xl"
+            maxLength="6"
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+          />
+          <button 
+            onClick={() => handleLogin()} 
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const newOrders = orders.filter(o => o.status === 'NEW');
+  const readyOrders = orders.filter(o => o.status === 'READY');
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+          <h2 className="text-xl font-bold text-center">{outlet?.name || 'Vendor Screen'}</h2>
+          <p className="text-center text-gray-500 text-sm">
+            {newOrders.length} pending · {readyOrders.length} ready
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+          <h3 className="font-bold text-lg mb-3 text-orange-600">🆕 New Orders ({newOrders.length})</h3>
+          {newOrders.length === 0 && (
+            <p className="text-gray-400 text-center py-4">No new orders</p>
+          )}
+          {newOrders.map(order => (
+            <div key={order.id} className="border-b last:border-0 pb-3 mb-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="font-bold text-lg">Token #{order.token || order.id.slice(-5)}</span>
+                  <div className="text-sm text-gray-600 mt-1">{order.items || 'Items'}</div>
+                  <div className="font-bold mt-1">₹{order.grandTotal || 0}</div>
+                </div>
+                <button
+                  onClick={() => markReady(order.id)}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold"
+                >
+                  ✅ Ready
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {readyOrders.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <h3 className="font-bold text-lg mb-3 text-green-600">✅ Ready ({readyOrders.length})</h3>
+            {readyOrders.map(order => (
+              <div key={order.id} className="border-b last:border-0 pb-2 mb-2 opacity-60">
+                <div className="flex justify-between">
+                  <span className="font-medium">Token #{order.token || order.id.slice(-5)}</span>
+                  <span className="text-sm text-green-600">Ready</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

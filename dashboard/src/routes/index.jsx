@@ -25,6 +25,9 @@ import DashboardRedirect from '../components/DashboardRedirect';
 import BrandAnalytics from '../pages/owner/BrandAnalytics';
 import OutletAnalytics from '../pages/owner/OutletAnalytics';
 
+import PublicOrder from '../pages/PublicOrder';
+import VendorScreen from '../pages/VendorScreen';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -36,6 +39,9 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { index: true, element: <DashboardRedirect /> },
+      // Public routes (no layout)
+      { path: 'order/:outletId', element: <PublicOrder /> },
+      { path: 'vendor/:outletId', element: <VendorScreen /> },
       {
         path: 'kds',
         element: (

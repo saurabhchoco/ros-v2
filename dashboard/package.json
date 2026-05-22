@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:vendor": "vite --open /vendor-index.html",
+    "build:vendor": "vite build --outDir dist-vendor"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -19,6 +21,7 @@
     "react-hook-form": "^7.76.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.15.1",
+    "vite-plugin-pwa": "^1.3.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },

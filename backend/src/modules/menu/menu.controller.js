@@ -292,6 +292,24 @@ async function createCombo(request, reply) {
   return reply.send({ success: true, data: combo });
 }
 
+async function listPublicCategories(request, reply) {
+  const { organizationId, outletId } = request.query;
+  if (!organizationId || !outletId) {
+    return reply.status(400).send({ success: false, message: 'Missing organizationId or outletId' });
+  }
+  const categories = await menuService.listCategories(organizationId, outletId);
+  return reply.send({ success: true, data: categories });
+}
+
+async function listPublicMenuItems(request, reply) {
+  const { organizationId, outletId, categoryId } = request.query;
+  if (!organizationId || !outletId) {
+    return reply.status(400).send({ success: false, message: 'Missing organizationId or outletId' });
+  }
+  const items = await menuService.listMenuItems(organizationId, outletId, categoryId || null, false);
+  return reply.send({ success: true, data: items });
+}
+
 module.exports = {
   createCategory,
   listCategories,
@@ -300,5 +318,7 @@ module.exports = {
   importCSV,
   updateMenuItem,
   deleteMenuItem,
-  createCombo
+  createCombo,
+  listPublicCategories,
+  listPublicMenuItems
 };

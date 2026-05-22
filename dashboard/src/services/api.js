@@ -113,8 +113,28 @@ export const apiService = {
   async updateMenuItem(id, data) {
     return axios.put(`${API_URL}/menu/items/${id}`, data, { headers: await getAuthHeaders() });
   },
+
   async deleteMenuItem(id) {
     return axios.delete(`${API_URL}/menu/items/${id}`, { headers: await getAuthHeaders() });
-  }
+  },
 
+  // Public methods (no auth headers)
+async getPublicOutlet(outletId) {
+  return axios.get(`${API_URL}/public/outlet/${outletId}`);
+},
+async getPublicCategories(organizationId, outletId) {
+  return axios.get(`${API_URL}/public/categories?organizationId=${organizationId}&outletId=${outletId}`);
+},
+async getPublicMenuItems(organizationId, outletId, categoryId = null) {
+  let url = `${API_URL}/public/items?organizationId=${organizationId}&outletId=${outletId}`;
+  if (categoryId) url += `&categoryId=${categoryId}`;
+  return axios.get(url);
+},
+async createPublicOrder(data) {
+  return axios.post(`${API_URL}/public/orders`, data);
+},
+
+async vendorAuth(outletId, pin) {
+  return axios.post(`${API_URL}/vendor/auth`, { outletId, pin });
+}
 };

@@ -313,9 +313,29 @@ async function getOrderById(
 
 }
 
+async function generateToken(outletId) {
+  const today = new Date().toISOString().slice(0,10);
+  const result = await pool.query(
+    `SELECT token_number FROM orders 
+     WHERE outlet_id = $1 AND DATE(created_at) = $2
+     ORDER BY token_number DESC LIMIT 1`,
+    [outletId, today]
+  );
+  let lastNum = 0;
+  if (result.rows[0] && result.rows[0].token_number) {
+    const match = result.rows[0].token_number.match(/\d+/);
+    if (match) lastNum = parseInt(match[0]);
+  }
+  const newNum = lastNum + 1;
+  const prefixRes = await pool.query(`SELECT token_prefix FROM outlets WHERE id = $1`, [outletId]);
+  const prefix = prefixRes.rows[0]?.token_prefix || 'A';
+  return `${prefix}${newNum.toString().padStart(3, '0')}`;
+}
+
 module.exports = {
   createOrder,
   updateOrderStatus,
   listOrders,
-  getOrderById
+  getOrderById,
+  generateToken
 };

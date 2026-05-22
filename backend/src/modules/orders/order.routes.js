@@ -10,6 +10,7 @@ const userContextMiddleware =
   require('../../middleware/userContextMiddleware');
 const orderAccessMiddleware =
   require('../../middleware/orderAccessMiddleware');
+const { z } = require('zod');
 
 async function orderRoutes(app) {
 
@@ -59,6 +60,9 @@ async function orderRoutes(app) {
     },
     orderController.updateOrderStatus
   );
+
+  // ✅ NEW: Public order creation (no authentication)
+  app.post('/api/v1/public/orders', orderController.createPublicOrder);
 
 }
 

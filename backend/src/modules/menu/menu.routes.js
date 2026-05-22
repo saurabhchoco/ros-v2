@@ -106,6 +106,10 @@ async function menuRoutes(app) {
     menuController.createCombo
   );
 
+  // Public menu endpoints (no auth)
+  app.get('/api/v1/public/categories', menuController.listPublicCategories);
+  app.get('/api/v1/public/items', menuController.listPublicMenuItems);
+
 }
 
 module.exports =
