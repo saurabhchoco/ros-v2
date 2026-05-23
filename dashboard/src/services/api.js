@@ -155,4 +155,8 @@ async getOutletComparison(organizationId) {
   return axios.get(`${API_URL}/brand/outlet-comparison`, { headers: await getAuthHeaders(), params: { organizationId } });
 },
 
+async getDashboardSummary() {
+  return axios.get(`${API_URL}/dashboard/summary`, { headers: await getAuthHeaders() });
+}
+
 };

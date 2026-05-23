@@ -83,6 +83,12 @@ async function getOutletComparison(request, reply) {
   return reply.send({ success: true, data });
 }
 
+async function getDashboardSummary(request, reply) {
+  const { organization_id, outlet_id } = request.userContext;
+  const summary = await reportService.getDashboardSummary(organization_id, outlet_id);
+  return reply.send({ success: true, data: summary });
+}
+
 module.exports = {
   getSummary,
   getByDateRange,
@@ -91,5 +97,6 @@ module.exports = {
   getKitchenStats,
   getRevenueTrend,
   getOrderStatusDistribution,
-  getOutletComparison
+  getOutletComparison,
+  getDashboardSummary
 };

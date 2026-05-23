@@ -20,12 +20,13 @@ export default function Captain() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
 
-  // Order details
   const [tableNumber, setTableNumber] = useState('');
   const [tokenNumber, setTokenNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [orderSource, setOrderSource] = useState('DINE_IN');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+
 
   // Fetch categories
   useEffect(() => {
@@ -98,10 +99,7 @@ export default function Captain() {
     });
   };
 
-  const cartTotal = cart.reduce(
-    (s, i) => s + parseFloat(i.base_price) * i.quantity,
-    0
-  );
+  const cartTotal = cart.reduce((s, i) => s + parseFloat(i.base_price) * i.quantity, 0);
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   const handlePlaceOrder = async () => {
@@ -117,6 +115,7 @@ export default function Captain() {
         tokenNumber: tokenNumber || undefined,
         customerName: customerName || undefined,
         customerMobile: customerMobile || undefined,
+        paymentMethod,
         items: cart.map(i => ({
           itemName: i.name,
           quantity: i.quantity,
@@ -140,26 +139,18 @@ export default function Captain() {
     }
   };
 
-  if (!outlet) {
-    return (
-      <div className="flex items-center justify-center h-full text-red-500">
-        No outlet assigned
-      </div>
-    );
-  }
+  if (!outlet) return <div className="flex items-center justify-center h-full text-red-500">No outlet assigned</div>;
 
   if (loading) {
     return (
       <div className="flex h-full overflow-hidden">
-        <div className="flex-1 p-5">
-          <div className="flex gap-2 mb-4">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-10 w-24 rounded-full" />
-            ))}
+        <div className="flex-1 p-6">
+          <div className="flex gap-2 mb-6">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10 w-24 rounded-full" />)}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="bg-white rounded-xl p-4">
+              <div key={i} className="bg-white rounded-2xl p-4">
                 <Skeleton className="h-4 w-8 mb-2" />
                 <Skeleton className="h-5 w-24 mb-2" />
                 <Skeleton className="h-6 w-16" />
@@ -167,7 +158,7 @@ export default function Captain() {
             ))}
           </div>
         </div>
-        <div className="w-80 bg-white p-4">
+        <div className="w-80 bg-white/95 backdrop-blur-sm p-4 shadow-xl">
           <Skeleton className="h-8 w-32 mb-4" />
           <Skeleton className="h-10 w-full mb-2" />
           <Skeleton className="h-10 w-full mb-2" />
@@ -182,25 +173,12 @@ export default function Captain() {
         <div className="bg-white rounded-2xl shadow-xl p-10 text-center max-w-sm w-full">
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h2>
-          <p className="text-primary-500 font-bold text-xl mb-4">
-            {orderSuccess.order_no}
-          </p>
-          {orderSuccess.table_number && (
-            <p className="text-gray-500 mb-1">🪑 Table {orderSuccess.table_number}</p>
-          )}
-          {orderSuccess.token_number && (
-            <p className="text-gray-500 mb-1">🎫 Token {orderSuccess.token_number}</p>
-          )}
-          {orderSuccess.customer_name && (
-            <p className="text-gray-500 mb-1">👤 {orderSuccess.customer_name}</p>
-          )}
-          <p className="text-3xl font-extrabold text-gray-900 my-5">
-            ₹{parseFloat(orderSuccess.grand_total).toFixed(2)}
-          </p>
-          <button
-            onClick={() => setOrderSuccess(null)}
-            className="w-full bg-primary-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-primary-600 transition"
-          >
+          <p className="text-indigo-500 font-bold text-xl mb-4">{orderSuccess.order_no}</p>
+          {orderSuccess.table_number && <p className="text-gray-500 mb-1">🪑 Table {orderSuccess.table_number}</p>}
+          {orderSuccess.token_number && <p className="text-gray-500 mb-1">🎫 Token {orderSuccess.token_number}</p>}
+          {orderSuccess.customer_name && <p className="text-gray-500 mb-1">👤 {orderSuccess.customer_name}</p>}
+          <p className="text-3xl font-extrabold text-gray-900 my-5">₹{parseFloat(orderSuccess.grand_total).toFixed(2)}</p>
+          <button onClick={() => setOrderSuccess(null)} className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:from-indigo-600 hover:to-indigo-700 transition shadow-sm">
             + New Order
           </button>
         </div>
@@ -209,19 +187,19 @@ export default function Captain() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Menu Area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-        {/* Category Tabs */}
-        <div className="flex gap-2 px-5 py-4 overflow-x-auto bg-white border-b border-gray-200 flex-shrink-0">
+    <div className="flex h-full overflow-hidden bg-gray-50">
+      {/* Left – Menu Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Category Tabs – pill shaped, gradient active */}
+        <div className="flex gap-2 px-6 py-4 overflow-x-auto bg-white border-b border-gray-100 flex-shrink-0">
           {categories.map(cat => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                 activeCategory === cat.id
-                  ? 'bg-primary-500 text-white shadow'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:border-primary-300'
+                  ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {cat.name}
@@ -229,12 +207,11 @@ export default function Captain() {
           ))}
         </div>
 
-        {/* Items Grid with Category Loading Skeletons */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-5 overflow-y-auto flex-1">
+        {/* Items Grid – modern cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 p-6 overflow-y-auto">
           {categoryLoading ? (
-            // Show skeleton cards while switching category
             Array(6).fill(0).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl p-4">
+              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
                 <Skeleton className="h-4 w-8 mb-2" />
                 <Skeleton className="h-5 w-24 mb-2" />
                 <Skeleton className="h-6 w-16" />
@@ -242,53 +219,42 @@ export default function Captain() {
             ))
           ) : (
             items.map(item => (
-              <div
-                key={item.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 flex flex-col"
-              >
-                <span className="text-xl mb-1">{item.is_veg ? '🟢' : '🔴'}</span>
-                <p className="font-semibold text-gray-800 text-sm leading-tight flex-1">
-                  {item.name}
-                </p>
-                {item.description && (
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">
-                    {item.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                  <span className="text-primary-600 font-bold text-xl">
-                    ₹{parseFloat(item.base_price).toFixed(0)}
-                  </span>
+              <div key={item.id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 p-4 flex flex-col border border-gray-50">
+                <div className="flex justify-between items-start">
+                  <span className="text-xl">{item.is_veg ? '🥬' : '🍗'}</span>
+                </div>
+                <h3 className="font-semibold text-gray-800 mt-2 line-clamp-1">{item.name}</h3>
+                {item.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>}
+                <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-50">
+                  <span className="text-indigo-600 font-bold text-xl">₹{parseFloat(item.base_price).toFixed(0)}</span>
                   <button
                     onClick={() => addToCart(item)}
-                    className="px-3 py-1.5 bg-primary-500 text-white text-xs font-bold rounded-lg hover:bg-primary-600 transition flex items-center gap-1"
+                    className="px-3 py-1.5 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 transition flex items-center gap-1 shadow-sm"
                   >
-                    <Plus className="h-3 w-3" /> ADD
+                    <Plus className="h-3.5 w-3.5" /> Add
                   </button>
                 </div>
               </div>
             ))
           )}
           {!categoryLoading && items.length === 0 && (
-            <div className="col-span-full text-center text-gray-400 py-16">
-              No items in this category
-            </div>
+            <div className="col-span-full text-center text-gray-400 py-16">No items in this category</div>
           )}
         </div>
       </div>
 
-      {/* Floating Cart Button (visible when drawer closed and cart not empty) */}
+      {/* Floating Cart Button */}
       {!isCartOpen && cartCount > 0 && (
         <button
           onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 bg-primary-600 text-white p-3 rounded-full shadow-lg flex items-center gap-2 z-30"
+          className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full shadow-lg flex items-center gap-2 z-30 hover:bg-indigo-700 transition-all hover:scale-105"
         >
           <ShoppingCart className="h-5 w-5" />
           <span className="font-bold">{cartCount}</span>
         </button>
       )}
 
-      {/* Cart Drawer */}
+      {/* Cart Drawer – pass props as before (unchanged) */}
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -297,7 +263,6 @@ export default function Captain() {
         total={cartTotal}
         onPlaceOrder={handlePlaceOrder}
         placing={placing}
-        // Order detail props
         orderSource={orderSource}
         setOrderSource={setOrderSource}
         tableNumber={tableNumber}
@@ -308,6 +273,8 @@ export default function Captain() {
         setCustomerName={setCustomerName}
         customerMobile={customerMobile}
         setCustomerMobile={setCustomerMobile}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
       />
     </div>
   );

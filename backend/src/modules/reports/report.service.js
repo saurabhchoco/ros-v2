@@ -254,7 +254,8 @@ async function getOutletComparison(organizationId) {
     SELECT o.id, o.name,
       COUNT(ord.id) as order_count,
       COALESCE(SUM(ord.grand_total), 0) as revenue,
-      COALESCE(AVG(ord.grand_total), 0) as avg_order_value
+      COALESCE(AVG(ord.grand_total), 0) as avg_order_value,
+      COUNT(CASE WHEN ord.order_status IN ('NEW','PREPARING') THEN 1 END) as pending_orders
     FROM outlets o
     LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.organization_id = o.organization_id
     WHERE o.organization_id = $1
@@ -266,8 +267,111 @@ async function getOutletComparison(organizationId) {
     name: row.name,
     orderCount: parseInt(row.order_count),
     revenue: parseFloat(row.revenue),
-    avgOrderValue: parseFloat(row.avg_order_value)
+    avgOrderValue: parseFloat(row.avg_order_value),
+    pendingOrders: parseInt(row.pending_orders)
   }));
+}
+
+async function getDashboardSummary(organizationId, outletId = null) {
+  const today = new Date().toISOString().slice(0, 10);
+  const params = [organizationId, today];
+  let outletFilter = '';
+  if (outletId) {
+    outletFilter = ' AND outlet_id = $3';
+    params.push(outletId);
+  }
+
+  // 1. Main metrics (no GROUP BY)
+  const orderQuery = `
+    SELECT 
+      COUNT(*) as total_orders,
+      COALESCE(SUM(grand_total), 0) as total_revenue,
+      COUNT(CASE WHEN order_status IN ('NEW','PREPARING') THEN 1 END) as pending_orders,
+      COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) as completed_orders,
+      COALESCE(AVG(grand_total), 0) as avg_order_value
+    FROM orders
+    WHERE organization_id = $1 AND DATE(created_at) = $2
+    ${outletFilter}
+  `;
+  const orderRes = await pool.query(orderQuery, params);
+
+  // 2. Top 5 items
+  const topItemsQuery = `
+    SELECT oi.item_name, SUM(oi.quantity) as total_qty, SUM(oi.line_total) as revenue
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.organization_id = $1 AND DATE(o.created_at) = $2
+    ${outletFilter}
+    GROUP BY oi.item_name
+    ORDER BY revenue DESC
+    LIMIT 5
+  `;
+  const topItemsRes = await pool.query(topItemsQuery, params);
+
+  // 3. Payment breakdown
+  const paymentQuery = `
+    SELECT payment_method, COALESCE(SUM(grand_total), 0) as total
+    FROM orders
+    WHERE organization_id = $1 AND DATE(created_at) = $2
+    ${outletFilter}
+    GROUP BY payment_method
+  `;
+  const paymentRes = await pool.query(paymentQuery, params);
+
+  // 4. Order source breakdown – fix GROUP BY by using a subquery or repeating CASE
+  const sourceQuery = `
+    SELECT source, COUNT(*) as count
+    FROM (
+      SELECT 
+        CASE 
+          WHEN order_source = 'PUBLIC_QR' THEN 'QR'
+          ELSE order_source
+        END as source
+      FROM orders
+      WHERE organization_id = $1 AND DATE(created_at) = $2
+      ${outletFilter}
+    ) t
+    GROUP BY source
+  `;
+  const sourceRes = await pool.query(sourceQuery, params);
+
+  // 5. Payment status KPIs
+  const paidQuery = `
+    SELECT 
+      COUNT(CASE WHEN payment_status = 'PAID' THEN 1 END) as paid_orders,
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) as paid_amount,
+      COUNT(CASE WHEN payment_status IN ('PENDING', 'PENDING_PROOF') THEN 1 END) as pending_orders,
+      COALESCE(SUM(CASE WHEN payment_status IN ('PENDING', 'PENDING_PROOF') THEN grand_total END), 0) as pending_amount
+    FROM orders
+    WHERE organization_id = $1 AND DATE(created_at) = $2
+    ${outletFilter}
+  `;
+  const paidRes = await pool.query(paidQuery, params);
+
+  // 6. Order status counts (NEW, PREPARING, READY, COMPLETED)
+  const statusQuery = `
+    SELECT order_status, COUNT(*) as count
+    FROM orders
+    WHERE organization_id = $1 AND DATE(created_at) = $2
+    ${outletFilter}
+    GROUP BY order_status
+  `;
+  const statusRes = await pool.query(statusQuery, params);
+  const orderStatusCounts = {};
+  statusRes.rows.forEach(row => { orderStatusCounts[row.order_status] = parseInt(row.count); });
+
+  return {
+    totalOrders: parseInt(orderRes.rows[0].total_orders || 0),
+    totalRevenue: parseFloat(orderRes.rows[0].total_revenue || 0),
+    pendingOrders: parseInt(orderRes.rows[0].pending_orders || 0),
+    completedOrders: parseInt(orderRes.rows[0].completed_orders || 0),
+    avgOrderValue: parseFloat(orderRes.rows[0].avg_order_value || 0),
+    topItems: topItemsRes.rows,
+    paymentBreakdown: paymentRes.rows,
+    orderSource: sourceRes.rows,
+    paymentStatus: paidRes.rows[0],
+    orderStatus: orderStatusCounts
+  };
 }
 
 module.exports = {
@@ -278,5 +382,6 @@ module.exports = {
   getKitchenStats,
   getRevenueTrend,
   getOrderStatusDistribution,
-  getOutletComparison
+  getOutletComparison,
+  getDashboardSummary
 };

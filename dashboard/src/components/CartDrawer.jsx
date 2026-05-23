@@ -21,10 +21,12 @@ export default function CartDrawer({
   setCustomerName,
   customerMobile,
   setCustomerMobile,
+  // ✅ New: payment method
+  paymentMethod,
+  setPaymentMethod,
 }) {
   if (!isOpen) return null;
 
-  // ✅ Use 'quantity' (not 'qty') and handle empty cart
   const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const safeTotal = typeof total === 'number' && !isNaN(total) ? total : 0;
 
@@ -112,6 +114,20 @@ export default function CartDrawer({
                 placeholder="Optional"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
               />
+            </div>
+
+            {/* ✅ Payment Method Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+              >
+                <option value="CASH">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="CARD">Card</option>
+              </select>
             </div>
           </div>
 

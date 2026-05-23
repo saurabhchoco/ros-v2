@@ -5,7 +5,7 @@ const createOrderSchema = z.object({
   organizationId: z.string(),
 
   outletId: z.string(),
-
+  paymentMethod: z.enum(['CASH', 'UPI', 'CARD']).default('CASH'),
   orderSource: z.enum([
     'DINE_IN',
     'TAKEAWAY',

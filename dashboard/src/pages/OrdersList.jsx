@@ -107,6 +107,7 @@ if (loading) {
                 <th className="text-left p-3">Amount</th>
                 <th className="text-left p-3">Status</th>
                 <th className="text-left p-3">Items</th>
+                <th className="text-left p-3">Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -138,6 +139,11 @@ if (loading) {
                   </td>
                   <td className="p-3">
                     {order.items?.length || 0}
+                  </td>
+                  <td className="p-3">
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                      {order.payment_method || 'CASH'}
+                    </span>
                   </td>
                 </tr>
               ))}

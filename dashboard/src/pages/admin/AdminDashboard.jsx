@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../../services/adminApi';
+import Badge from '../../components/ui/Badge'; // ✅ add this import
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -67,7 +68,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
           {
             label: 'Total Brands',
@@ -154,13 +155,9 @@ export default function AdminDashboard() {
                   {brand.user_count}
                 </td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    brand.status === 'ACTIVE'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <Badge variant={brand.status === 'ACTIVE' ? 'success' : 'neutral'}>
                     {brand.status}
-                  </span>
+                  </Badge>
                 </td>
                 <td className="p-4">
                   <button

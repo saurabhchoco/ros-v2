@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { getTenantContext } from '../../utils/tenantContext';
 import { adminApi } from '../../services/adminApi';
 
 const OUTLET_TYPES = [
@@ -8,38 +9,41 @@ const OUTLET_TYPES = [
   'QSR',
   'CAFE',
   'BAKERY',
+  'FOOD_COURT',
+  'CLOUD_KITCHEN',
+  'KIOSK',
+  'STREET_FOOD'
 ];
 
 export default function CreateOutlet() {
   const navigate = useNavigate();
   const outlet = useAuthStore((s) => s.outlet);
+  const { organizationId: userOrgId } = getTenantContext(outlet);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    organizationId: outlet?.organization_id || '',
-    name: '',
-    outletType: 'RESTAURANT'
-  });
-
-  const set = (field) => (e) =>
-    setForm((prev) => ({
-      ...prev,
-      [field]: e.target.value
-    }));
+  const [name, setName] = useState('');
+  const [outletType, setOutletType] = useState('RESTAURANT');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!userOrgId) {
+      setError('Organization ID not found. Please log out and log in again.');
+      return;
+    }
     setLoading(true);
-
+    setError('');
+    const payload = {
+      organizationId: userOrgId,
+      name: name,
+      outletType: outletType
+    };
+    console.log('Submitting payload:', payload);
     try {
-      await adminApi.createOutletAsBrandOwner(form);
+      await adminApi.createOutletAsBrandOwner(payload);
       navigate('/owner');
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        'Failed to create outlet'
-      );
+      setError(err.response?.data?.message || 'Failed to create outlet');
     } finally {
       setLoading(false);
     }
@@ -48,44 +52,38 @@ export default function CreateOutlet() {
   return (
     <div className="p-6 max-w-lg mx-auto">
       <button
-        onClick={() => navigate('/owner')}
-        className="text-indigo-500 text-sm font-medium mb-6 hover:underline"
+        onClick={() => navigate(-1)}
+        className="text-indigo-500 text-sm font-medium mb-6 flex items-center gap-1 hover:underline"
       >
         ← Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Create Outlet
-      </h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Outlet</h2>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Outlet Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Outlet Name</label>
             <input
               type="text"
-              value={form.name}
-              onChange={set('name')}
-              placeholder="e.g. Downtown Branch"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Bandra West Branch"
               required
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Outlet Type</label>
             <select
-              value={form.outletType}
-              onChange={set('outletType')}
+              value={outletType}
+              onChange={(e) => setOutletType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
             >
-              {OUTLET_TYPES.map((t) => (
+              {OUTLET_TYPES.map(t => (
                 <option key={t} value={t}>
-                  {t}
+                  {t.replace('_', ' ')}
                 </option>
               ))}
             </select>

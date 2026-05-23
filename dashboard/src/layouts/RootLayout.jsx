@@ -55,8 +55,8 @@ const navItems = [
               onClick={() => navigate(item.path)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 isActive(item.path)
-                  ? 'bg-white text-indigo-600 shadow'
-                  : 'bg-white/20 text-white hover:bg-white/30'
+                  ? 'bg-white text-primary-600 shadow'   // ✅ high contrast
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
             >
               {item.label}

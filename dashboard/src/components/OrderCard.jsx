@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 
 function useElapsedTime(createdAt) {
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState({ mins: 0, secs: 0 });
   useEffect(() => {
     const created = createdAt ? new Date(createdAt).getTime() : Date.now();
     const tick = () => {
-      const mins = Math.floor((Date.now() - created) / 60000);
-      setElapsed(mins);
+      const totalSeconds = Math.floor((Date.now() - created) / 1000);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      setElapsed({ mins, secs });
     };
     tick();
-    const interval = setInterval(tick, 10000); // update every 10s
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [createdAt]);
   return elapsed;
@@ -23,13 +25,11 @@ export default function OrderCard({
   onStatusChange,
 }) {
   const [updating, setUpdating] = useState(false);
-  const elapsed = useElapsedTime(order.createdAt);
+  const { mins: elapsedMins, secs: elapsedSecs } = useElapsedTime(order.createdAt);
   const staleSoundPlayed = useRef(false);
 
-  // Determine if it's a new order that has been waiting > 1 minute
-  const isStaleNew = order.orderStatus === 'NEW' && elapsed >= 1;
+  const isStaleNew = order.orderStatus === 'NEW' && elapsedMins >= 1;
 
-  // Play a special "alert" sound when order becomes stale (once per order)
   useEffect(() => {
     if (isStaleNew && !staleSoundPlayed.current) {
       staleSoundPlayed.current = true;
@@ -39,9 +39,9 @@ export default function OrderCard({
   }, [isStaleNew]);
 
   const timerColor =
-    elapsed >= 10
+    elapsedMins >= 10
       ? 'bg-red-100 text-red-700'
-      : elapsed >= 5
+      : elapsedMins >= 5
       ? 'bg-yellow-100 text-yellow-700'
       : 'bg-green-100 text-green-700';
 
@@ -61,14 +61,14 @@ export default function OrderCard({
       })
     : '';
 
-  // Pulsing animation class
-  const pulseClass = isStaleNew ? 'animate-pulse ring-2 ring-red-500 ring-opacity-75' : '';
+  // More dramatic pulse class (red background flash + thick ring)
+const pulseClass = isStaleNew ? 'animate-pulse-red ring-4 ring-red-500 shadow-xl' : '';
+
 
   return (
     <div
       className={`bg-white rounded-2xl shadow-md border-l-4 border-indigo-400 p-5 transition-all ${pulseClass}`}
     >
-      {/* Top row */}
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-bold text-gray-800 text-lg leading-tight">
@@ -76,24 +76,19 @@ export default function OrderCard({
           </p>
           {time && <p className="text-gray-400 text-xs mt-0.5">{time}</p>}
         </div>
-        <span
-          className={`${timerColor} text-xs font-bold px-2 py-1 rounded-lg`}
-        >
-          {elapsed}m
+        <span className={`${timerColor} text-xs font-bold px-2 py-1 rounded-lg`}>
+          {elapsedMins}:{elapsedSecs.toString().padStart(2, '0')}
         </span>
       </div>
 
-      {/* Order source */}
       <p className="uppercase text-xs tracking-widest text-gray-400 font-semibold mb-2">
         {order.orderSource || 'DINE IN'}
       </p>
 
-      {/* Amount */}
       <p className="text-indigo-500 font-extrabold text-3xl mb-3">
         ₹{parseFloat(order.grandTotal || 0).toFixed(0)}
       </p>
 
-      {/* Meta tags */}
       <div className="flex flex-wrap gap-1.5 mb-4">
         {order.tableNumber && (
           <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md font-medium">
@@ -110,9 +105,13 @@ export default function OrderCard({
             👤 {order.customerName}
           </span>
         )}
+        {order.paymentMethod && (
+          <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md font-medium">
+            💳 {order.paymentMethod}
+          </span>
+        )}
       </div>
 
-      {/* Action button */}
       <button
         onClick={handleClick}
         disabled={updating}

@@ -7,10 +7,12 @@ const createOutletSchema = z.object({
   outletType: z.enum([
     'RESTAURANT',
     'QSR',
+    'CAFE',
+    'BAKERY',
+    'FOOD_COURT',
     'CLOUD_KITCHEN',
-    'FOCO',
-    'FRANCHISE',
-    'CENTRAL_KITCHEN'
+    'KIOSK',
+    'STREET_FOOD'
   ])
 });
 

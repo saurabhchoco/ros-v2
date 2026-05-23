@@ -20,7 +20,8 @@ async function pushOrderToKDS(order) {
       customerName: order.customer_name || null,
       grandTotal: order.grand_total,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      paymentMethod: order.payment_method || 'CASH' 
     });
 
 }

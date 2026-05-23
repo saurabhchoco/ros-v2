@@ -66,6 +66,9 @@ async function reportRoutes(app) {
     preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER'])]
   }, reportController.getOutletComparison);
 
+  app.get('/api/v1/dashboard/summary', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['OUTLET_MANAGER', 'BRAND_OWNER'])]
+  }, reportController.getDashboardSummary);
 
 }
 

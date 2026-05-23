@@ -58,11 +58,12 @@ async function createOrder(data) {
         tax_amount,
         discount_amount,
         grand_total,
-        payment_status
+        payment_status,
+        payment_method
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,
-        $7,$8,$9,$10,$11,$12,$13,$14,$15
+        $7,$8,$9,$10,$11,$12,$13,$14,$15,$16
       )
       RETURNING *
     `;
@@ -82,7 +83,8 @@ async function createOrder(data) {
       taxAmount,
       discountAmount,
       grandTotal,
-      'PENDING'
+      'PENDING',
+      data.paymentMethod || 'CASH'
     ];
 
     const orderResult =

@@ -124,6 +124,7 @@ async function createPublicOrder(request, reply) {
   const publicOrderSchema = z.object({
     outletId: z.string(),
     organizationId: z.string(),
+    paymentMethod: z.enum(['CASH', 'UPI', 'CARD']).default('CASH'),
     items: z.array(z.object({
       menuItemId: z.string(),      // ← Only ID sent from frontend
       quantity: z.number().positive()
@@ -142,7 +143,7 @@ async function createPublicOrder(request, reply) {
     });
   }
 
-  const { outletId, organizationId, items, customerName, customerMobile, paymentProof } = result.data;
+  const { outletId, organizationId, items, customerName, customerMobile, paymentProof, paymentMethod } = result.data;
   
   // ✅ STEP 1: Generate token
   const token = await orderService.generateToken(outletId);
@@ -197,13 +198,13 @@ async function createPublicOrder(request, reply) {
     `INSERT INTO orders (
       id, organization_id, outlet_id, order_no, order_source, order_status,
       customer_name, customer_mobile, subtotal, tax_amount, discount_amount, 
-      grand_total, payment_status, token_number, source, created_at, updated_at
+      grand_total, payment_status, token_number, source, payment_method, created_at, updated_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,$16, NOW(), NOW())`,
     [
       orderId, organizationId, outletId, orderNo, 'PUBLIC_QR', 'NEW',
       customerName || null, customerMobile || null, subtotal, taxAmount, discountAmount,
-      grandTotal, paymentProof ? 'PENDING_PROOF' : 'PENDING', token, 'PUBLIC_QR'
+      grandTotal, paymentProof ? 'PENDING_PROOF' : 'PENDING', token, 'PUBLIC_QR', paymentMethod || 'CASH'
     ]
   );
   
@@ -235,7 +236,8 @@ async function createPublicOrder(request, reply) {
     grandTotal,
     status: 'NEW',
     outletId,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    paymentMethod: paymentMethod || 'CASH'
   };
   
   await admin.firestore().collection('active_orders').doc(orderId).set(orderData);

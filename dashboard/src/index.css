@@ -10,3 +10,15 @@ body,
   min-height: 100vh;
   font-family: Inter, sans-serif;
 }
+
+@keyframes pulse-red {
+  0%, 100% { background-color: white; border-color: #fecaca; }
+  50% { background-color: #fee2e2; border-color: #ef4444; }
+}
+.animate-pulse-red {
+  animation: pulse-red 0.8s ease-in-out infinite;
+}
+
+.rounded-18 {
+  border-radius: 18px;
+}
