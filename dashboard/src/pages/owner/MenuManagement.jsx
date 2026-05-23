@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
 import { adminApi } from '../../services/adminApi';
 import { getTenantContext } from '../../utils/tenantContext';   // ADD THIS
+import Skeleton from '../../components/ui/Skeleton';
 
 export default function MenuManagement() {
   const [searchParams] = useSearchParams();
@@ -226,13 +227,30 @@ const createCombo = async (comboData) => {
   }
 };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-400">Loading menu...</div>
+if (loading) {
+  return (
+    <div className="p-6">
+      <Skeleton className="h-8 w-48 mb-6" />
+      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <Skeleton className="h-5 w-32 mb-3" />
+        <Skeleton className="h-10 w-full" />
       </div>
-    );
-  }
+      <div className="flex gap-2 mb-6">
+        {[1,2,3].map(i => <Skeleton key={i} className="h-10 w-24 rounded-full" />)}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="bg-white rounded-xl p-4">
+            <Skeleton className="h-4 w-8 mb-2" />
+            <Skeleton className="h-5 w-24 mb-2" />
+            <Skeleton className="h-6 w-16 mb-3" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="p-6">

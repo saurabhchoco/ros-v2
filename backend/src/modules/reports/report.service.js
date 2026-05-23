@@ -194,9 +194,89 @@ async function getOutletAnalytics(outletId, organizationId, period = 'day') {
   };
 }
 
+async function getKitchenStats(organizationId, outletId) {
+  const today = new Date().toISOString().split('T')[0];
+  // Completed today
+  const completedQuery = `
+    SELECT COUNT(*) as completed
+    FROM orders
+    WHERE organization_id = $1 AND outlet_id = $2
+      AND order_status = 'COMPLETED'
+      AND DATE(created_at) = $3
+  `;
+  const completedRes = await pool.query(completedQuery, [organizationId, outletId, today]);
+
+  // Average preparation time (from NEW to COMPLETED/READY) in last 24h
+  const prepQuery = `
+    SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 60) as avg_minutes
+    FROM orders
+    WHERE organization_id = $1 AND outlet_id = $2
+      AND order_status IN ('COMPLETED', 'READY')
+      AND created_at >= NOW() - INTERVAL '24 hours'
+  `;
+  const prepRes = await pool.query(prepQuery, [organizationId, outletId]);
+
+  return {
+    completedToday: parseInt(completedRes.rows[0].completed || 0),
+    avgPrepTime: Math.round(parseFloat(prepRes.rows[0].avg_minutes || 0)),
+  };
+}
+
+// Revenue trend (last 7 days)
+async function getRevenueTrend(organizationId) {
+  const result = await pool.query(`
+    SELECT DATE(created_at) as date, COALESCE(SUM(grand_total), 0) as revenue
+    FROM orders
+    WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '7 days'
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+  `, [organizationId]);
+  return result.rows.map(row => ({
+    date: row.date.toISOString().slice(0,10),
+    revenue: parseFloat(row.revenue)
+  }));
+}
+
+// Order status distribution
+async function getOrderStatusDistribution(organizationId) {
+  const result = await pool.query(`
+    SELECT order_status, COUNT(*) as count
+    FROM orders
+    WHERE organization_id = $1
+    GROUP BY order_status
+  `, [organizationId]);
+  return result.rows.map(row => ({ status: row.order_status, count: parseInt(row.count) }));
+}
+
+// Outlet comparison
+async function getOutletComparison(organizationId) {
+  const result = await pool.query(`
+    SELECT o.id, o.name,
+      COUNT(ord.id) as order_count,
+      COALESCE(SUM(ord.grand_total), 0) as revenue,
+      COALESCE(AVG(ord.grand_total), 0) as avg_order_value
+    FROM outlets o
+    LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.organization_id = o.organization_id
+    WHERE o.organization_id = $1
+    GROUP BY o.id, o.name
+    ORDER BY revenue DESC
+  `, [organizationId]);
+  return result.rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    orderCount: parseInt(row.order_count),
+    revenue: parseFloat(row.revenue),
+    avgOrderValue: parseFloat(row.avg_order_value)
+  }));
+}
+
 module.exports = {
   getSummaryReport,
   getDateRangeReport,
   getBrandAnalytics,
-  getOutletAnalytics
+  getOutletAnalytics,
+  getKitchenStats,
+  getRevenueTrend,
+  getOrderStatusDistribution,
+  getOutletComparison
 };

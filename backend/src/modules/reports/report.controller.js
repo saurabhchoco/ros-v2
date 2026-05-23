@@ -56,9 +56,40 @@ async function getOutletAnalytics(request, reply) {
   }
 }
 
+async function getKitchenStats(request, reply) {
+  const { organization_id, outlet_id } = request.userContext;
+  if (!outlet_id) {
+    return reply.status(400).send({ success: false, message: 'No outlet assigned' });
+  }
+  const stats = await reportService.getKitchenStats(organization_id, outlet_id);
+  return reply.send({ success: true, data: stats });
+}
+
+async function getRevenueTrend(request, reply) {
+  const { organization_id } = request.userContext;
+  const data = await reportService.getRevenueTrend(organization_id);
+  return reply.send({ success: true, data });
+}
+
+async function getOrderStatusDistribution(request, reply) {
+  const { organization_id } = request.userContext;
+  const data = await reportService.getOrderStatusDistribution(organization_id);
+  return reply.send({ success: true, data });
+}
+
+async function getOutletComparison(request, reply) {
+  const { organization_id } = request.userContext;
+  const data = await reportService.getOutletComparison(organization_id);
+  return reply.send({ success: true, data });
+}
+
 module.exports = {
   getSummary,
   getByDateRange,
   getBrandAnalytics,
-  getOutletAnalytics
+  getOutletAnalytics,
+  getKitchenStats,
+  getRevenueTrend,
+  getOrderStatusDistribution,
+  getOutletComparison
 };

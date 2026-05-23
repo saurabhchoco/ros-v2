@@ -41,6 +41,32 @@ async function reportRoutes(app) {
     },
     reportController.getOutletAnalytics
   );
+
+  app.get(
+  '/api/v1/kitchen/stats',
+  {
+    preHandler: [
+      authMiddleware,
+      userContextMiddleware,
+      roleMiddleware(['OUTLET_MANAGER', 'KITCHEN'])
+    ]
+  },
+    reportController.getKitchenStats
+  );
+
+  app.get('/api/v1/brand/revenue-trend', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER'])]
+  }, reportController.getRevenueTrend);
+
+  app.get('/api/v1/brand/order-status', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER'])]
+  }, reportController.getOrderStatusDistribution);
+
+  app.get('/api/v1/brand/outlet-comparison', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER'])]
+  }, reportController.getOutletComparison);
+
+
 }
 
 module.exports = reportRoutes;

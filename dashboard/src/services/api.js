@@ -136,5 +136,23 @@ async createPublicOrder(data) {
 
 async vendorAuth(outletId, pin) {
   return axios.post(`${API_URL}/vendor/auth`, { outletId, pin });
-}
+},
+
+async getKitchenStats(organizationId, outletId) {
+  return axios.get(`${API_URL}/kitchen/stats`, {
+    headers: await getAuthHeaders(),
+    params: { organizationId, outletId } // if needed; but backend uses userContext
+  });
+},
+
+async getRevenueTrend(organizationId) {
+  return axios.get(`${API_URL}/brand/revenue-trend`, { headers: await getAuthHeaders(), params: { organizationId } });
+},
+async getOrderStatusDistribution(organizationId) {
+  return axios.get(`${API_URL}/brand/order-status`, { headers: await getAuthHeaders(), params: { organizationId } });
+},
+async getOutletComparison(organizationId) {
+  return axios.get(`${API_URL}/brand/outlet-comparison`, { headers: await getAuthHeaders(), params: { organizationId } });
+},
+
 };

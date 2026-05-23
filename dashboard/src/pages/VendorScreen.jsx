@@ -5,6 +5,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { apiService } from '../services/api';
 import { useSoundAlert } from '../hooks/useSoundAlert';
+import Skeleton from '../components/ui/Skeleton';
 
 export default function VendorScreen() {
   const { outletId } = useParams();
@@ -99,9 +100,28 @@ export default function VendorScreen() {
     }
   };
 
-  if (loading) {
-    return <div className="p-6 text-center">Loading...</div>;
-  }
+if (loading) {
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl p-4 mb-4">
+          <Skeleton className="h-6 w-40 mx-auto mb-2" />
+          <Skeleton className="h-4 w-32 mx-auto" />
+        </div>
+        <div className="bg-white rounded-xl p-4">
+          <Skeleton className="h-6 w-32 mb-3" />
+          {[1,2,3].map(i => (
+            <div key={i} className="border-b pb-3 mb-3">
+              <Skeleton className="h-5 w-24 mb-2" />
+              <Skeleton className="h-4 w-48 mb-2" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
   if (!authenticated) {
     return (

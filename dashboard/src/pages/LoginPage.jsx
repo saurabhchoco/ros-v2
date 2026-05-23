@@ -5,6 +5,7 @@ import { auth } from '../config/firebase';
 import { apiService } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import Button from '../components/ui/Button';  // ✅ NEW
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,7 @@ export default function LoginPage() {
       const res = await apiService.getMe();
       if (res.data.success) {
         setOutlet(res.data.data);
-        toast.success('Login successful!');
+        toast.success('Login successful!');  // ✅ TEST TOAST
         navigate('/');
       } else {
         toast.error('Failed to load outlet information');
@@ -44,18 +45,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-900">
       <div className="w-full max-w-md px-4">
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <h2 className="text-4xl font-bold text-center mb-2 text-gray-900">
-            R-OS
-          </h2>
-          <p className="text-center text-gray-600 mb-8 text-sm">
-            Restaurant Operating System
-          </p>
+          <h2 className="text-4xl font-bold text-center mb-2 text-gray-900">R-OS</h2>
+          <p className="text-center text-gray-600 mb-8 text-sm">Restaurant Operating System</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <input
                 type="email"
                 value={email}
@@ -68,9 +63,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
                 value={password}
@@ -82,18 +75,20 @@ export default function LoginPage() {
               />
             </div>
 
-            <button
+            {/* ✅ REPLACED BUTTON */}
+            <Button
               type="submit"
+              variant="primary"
+              size="lg"
+              loading={loading}
               disabled={loading}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full"
             >
               {loading ? 'Signing in...' : 'Sign In'}
-            </button>
+            </Button>
           </form>
 
-          <p className="text-center text-gray-500 text-xs mt-6">
-            Demo: Use your Firebase credentials
-          </p>
+          <p className="text-center text-gray-500 text-xs mt-6">Demo: Use your Firebase credentials</p>
         </div>
       </div>
     </div>

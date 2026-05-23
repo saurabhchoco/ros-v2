@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
+import Skeleton from '../components/ui/Skeleton';
 
 export default function OrdersList() {
   const outlet = useAuthStore((s) => s.outlet);
@@ -35,9 +36,35 @@ export default function OrdersList() {
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center">Loading orders...</div>;
-  }
+if (loading) {
+  return (
+    <div className="p-8">
+      <Skeleton className="h-8 w-32 mb-4" />
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-3"><Skeleton className="h-4 w-16" /></th>
+              <th className="p-3"><Skeleton className="h-4 w-20" /></th>
+              <th className="p-3"><Skeleton className="h-4 w-16" /></th>
+              <th className="p-3"><Skeleton className="h-4 w-20" /></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1,2,3,4,5].map(i => (
+              <tr key={i} className="border-b">
+                <td className="p-3"><Skeleton className="h-4 w-20" /></td>
+                <td className="p-3"><Skeleton className="h-4 w-24" /></td>
+                <td className="p-3"><Skeleton className="h-4 w-16" /></td>
+                <td className="p-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
   if (!outlet) {
     return <div className="p-8 text-center text-red-600">No outlet assigned</div>;
