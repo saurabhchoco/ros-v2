@@ -4,7 +4,6 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
     "./vendor-index.html",
-    "./src/**/*.{js,ts,jsx,tsx}", // include vendor app
   ],
   theme: {
     extend: {
@@ -25,15 +24,9 @@ export default {
           500: '#8B5CF6',
           600: '#A855F7',
         },
-        success: {
-          500: '#22C55E',
-        },
-        warning: {
-          500: '#F59E0B',
-        },
-        danger: {
-          500: '#EF4444',
-        },
+        success: { 500: '#22C55E' },
+        warning: { 500: '#F59E0B' },
+        danger: { 500: '#EF4444' },
         neutral: {
           50: '#F8FAFC',
           100: '#F1F5F9',
@@ -48,37 +41,33 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Satoshi', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 8px 24px rgba(0, 0, 0, 0.06)',
         hover: '0 12px 28px rgba(0, 0, 0, 0.08)',
       },
+      borderRadius: {
+        xl: '18px', // 18px radius
+      },
       animation: {
-        'spin-slow': 'spin 1.5s linear infinite',
-        'pulse-fast': 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.2s ease-in-out',
+        'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.2s ease-out',
-        'count-up': 'countUp 1s ease-out',
-        'progress-bar': 'progressBar 0.8s ease-out',
-        'stagger-fade-in': 'fadeIn 0.3s ease-out forwards',
+        'progress': 'progress 0.8s ease-out',
+        'stagger-fade': 'fadeIn 0.3s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+          '0%': { opacity: 0, transform: 'scale(0.95)' },
+          '100%': { opacity: 1, transform: 'scale(1)' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
+          '0%': { opacity: 0, transform: 'translateY(10px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
         },
-        countUp: {
-          '0%': { opacity: '0', transform: 'translateY(5px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        progressBar: {
+        progress: {
           '0%': { width: '0%' },
-          '100%': { width: 'var(--progress-width)' },
+          '100%': { width: 'var(--width)' },
         },
       },
     },
