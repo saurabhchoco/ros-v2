@@ -155,6 +155,29 @@ async getOutletComparison(organizationId) {
 
 async getDashboardSummary() {
   return axios.get(`${API_URL}/dashboard/summary`, { headers: await getAuthHeaders() });
+},
+
+// Inventory
+async getInventory() {
+  return axios.get(`${API_URL}/inventory`, { headers: await getAuthHeaders() });
+},
+async getInventoryItem(id) {
+  return axios.get(`${API_URL}/inventory/${id}`, { headers: await getAuthHeaders() });
+},
+async createInventoryItem(data) {
+  return axios.post(`${API_URL}/inventory`, data, { headers: await getAuthHeaders() });
+},
+async updateInventoryItem(id, data) {
+  return axios.put(`${API_URL}/inventory/${id}`, data, { headers: await getAuthHeaders() });
+},
+async adjustInventoryStock(id, change, reason, source = 'MANUAL', referenceId = null) {
+  return axios.post(`${API_URL}/inventory/${id}/adjust`, { change, reason, source, referenceId }, { headers: await getAuthHeaders() });
+},
+async getInventoryHealth() {
+  return axios.get(`${API_URL}/inventory/health`, { headers: await getAuthHeaders() });
+},
+async getLowStockItems() {
+  return axios.get(`${API_URL}/inventory/low-stock`, { headers: await getAuthHeaders() });
 }
 
 };

@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Wallet, CreditCard, ShoppingBag,
-  AlertCircle, CheckCircle, Clock, Coffee, Zap
+  AlertCircle, CheckCircle, Clock, Coffee, Zap, Package
 } from 'lucide-react';
 
 const COLORS = ['#6D4AFF', '#F59E0B', '#22C55E', '#EF4444'];
@@ -28,6 +28,7 @@ export default function BrandOwnerDashboard() {
   const [outletComparison, setOutletComparison] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
+  const [stockHealth, setStockHealth] = useState(null);
 
   useEffect(() => {
     apiService.getDashboardSummary()
@@ -38,6 +39,13 @@ export default function BrandOwnerDashboard() {
     .catch(err => console.error(err))
     .finally(() => setSummaryLoading(false));
   }, []);
+
+  const fetchStockHealth = async () => {
+    try {
+      const res = await apiService.getInventoryHealth();
+      setStockHealth(res.data.data);
+    } catch (err) { console.error(err); }
+  };
 
   const fetchRevenueTrend = async () => {
     try {
@@ -60,7 +68,7 @@ export default function BrandOwnerDashboard() {
 
   useEffect(() => {
     if (outlet?.organizationId) {
-      Promise.all([fetchRevenueTrend(), fetchOrderStatus(), fetchOutletComparison()])
+      Promise.all([fetchRevenueTrend(), fetchOrderStatus(), fetchOutletComparison(), fetchStockHealth()])
         .finally(() => setChartsLoading(false));
     }
   }, [outlet]);
@@ -253,6 +261,18 @@ const updatedText = secondsSinceUpdate < 60 ? `${secondsSinceUpdate} sec ago` : 
                 <div>
                   <p className="text-sm font-medium text-neutral-500">Cancelled Today</p>
                   <p className="text-3xl font-bold text-red-600">{summary.totalCancellations || 0}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-xl">
+                  <Package className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-500">Stock Health</p>
+                  <p className="text-3xl font-bold text-blue-600">{stockHealth?.stockHealthPct || 100}%</p>
+                  <p className="text-xs text-neutral-400">{stockHealth?.lowStockCount || 0} low stock items</p>
                 </div>
               </div>
             </div>

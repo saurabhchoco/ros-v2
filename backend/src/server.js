@@ -13,6 +13,7 @@ const reportRoutes = require('./modules/reports/report.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
+const inventoryRoutes = require('./modules/inventory/inventory.routes');
 
 const helmet =
   require('@fastify/helmet');
@@ -154,6 +155,7 @@ app.register(orderRoutes);
 app.register(reportRoutes);
 app.register(menuRoutes);
 app.register(adminRoutes);
+app.register(inventoryRoutes);
 
 const start = async () => {
   try {

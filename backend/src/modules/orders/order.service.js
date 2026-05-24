@@ -12,6 +12,8 @@ const {
   updateOrderInKDS
 } = require('../kds/kdsRealtime.service');
 
+const inventoryService = require('../inventory/inventory.service');
+
 async function createOrder(data) {
 
   const client = await pool.connect();
@@ -148,6 +150,14 @@ async function createOrder(data) {
             orderResult.rows[0]
         });
 
+    //     // Deduct inventory
+    // await inventoryService.deductIngredientsForOrderItems(
+    //   validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+    //   data.organizationId,
+    //   data.outletId,
+    //   orderId,
+    //   data.createdBy || null
+    // );
     await client.query('COMMIT');
 
     await pushOrderToKDS(
@@ -357,6 +367,15 @@ async function generateToken(outletId) {
     
     const newNumber = result.rows[0].current_number;
     
+    // Deduct inventory
+    // await inventoryService.deductIngredientsForOrderItems(
+    //   validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+    //   data.organizationId,
+    //   data.outletId,
+    //   orderId,
+    //   data.createdBy || null`
+    // );
+
     await client.query('COMMIT');
     
     // Get token prefix from outlet

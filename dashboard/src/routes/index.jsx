@@ -28,6 +28,8 @@ import OutletAnalytics from '../pages/owner/OutletAnalytics';
 import PublicOrder from '../pages/PublicOrder';
 import VendorScreen from '../pages/VendorScreen';
 
+import InventoryList from '../pages/InventoryList';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -177,6 +179,16 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['BRAND_OWNER']}>
             <OutletAnalytics />
+          </ProtectedRoute>
+        )
+      },
+
+      // Inside the protected routes section (for BRAND_OWNER and OUTLET_MANAGER)
+      {
+        path: 'inventory',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER', 'OUTLET_MANAGER']}>
+            <InventoryList />
           </ProtectedRoute>
         )
       }
