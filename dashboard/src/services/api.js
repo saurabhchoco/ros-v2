@@ -59,12 +59,10 @@ export const apiService = {
     );
   },
 
-  async updateOrderStatus(orderId, status) {
-    return axios.patch(
-      `${API_URL}/orders/${orderId}/status`,
-      { status },
-      { headers: await getAuthHeaders() }
-    );
+  async updateOrderStatus(orderId, status, cancellationReason = null) {
+    const body = { status };
+    if (cancellationReason) body.cancellationReason = cancellationReason;
+    return axios.patch(`${API_URL}/orders/${orderId}/status`, body, { headers: await getAuthHeaders() });
   },
 
   async getSummary(date = null) {

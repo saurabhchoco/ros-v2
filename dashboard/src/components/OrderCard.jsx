@@ -23,8 +23,10 @@ export default function OrderCard({
   nextStatus,
   btnColor,
   onStatusChange,
+  onCancel,          // ✅ ADD THIS
 }) {
   const [updating, setUpdating] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const { mins: elapsedMins, secs: elapsedSecs } = useElapsedTime(order.createdAt);
   const staleSoundPlayed = useRef(false);
 
@@ -54,6 +56,17 @@ export default function OrderCard({
     }
   };
 
+  const handleCancel = async () => {
+    const reason = prompt('Reason for cancellation (optional):');
+    if (reason === null) return; // User cancelled prompt
+    setCancelling(true);
+    try {
+      await onCancel(order.id, reason);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const time = order.createdAt
     ? new Date(order.createdAt).toLocaleTimeString('en-IN', {
         hour: '2-digit',
@@ -61,19 +74,16 @@ export default function OrderCard({
       })
     : '';
 
-  // More dramatic pulse class (red background flash + thick ring)
-const pulseClass = isStaleNew ? 'animate-pulse-red ring-4 ring-red-500 shadow-xl' : '';
-
+  const pulseClass = isStaleNew ? 'animate-pulse-red ring-4 ring-red-500 shadow-xl' : '';
 
   return (
     <div
       className={`bg-white rounded-2xl shadow-md border-l-4 border-indigo-400 p-5 transition-all ${pulseClass}`}
     >
+      {/* ... existing header, timer, etc. ... */}
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="font-bold text-gray-800 text-lg leading-tight">
-            {order.orderNo}
-          </p>
+          <p className="font-bold text-gray-800 text-lg leading-tight">{order.orderNo}</p>
           {time && <p className="text-gray-400 text-xs mt-0.5">{time}</p>}
         </div>
         <span className={`${timerColor} text-xs font-bold px-2 py-1 rounded-lg`}>
@@ -119,6 +129,17 @@ const pulseClass = isStaleNew ? 'animate-pulse-red ring-4 ring-red-500 shadow-xl
       >
         {updating ? 'Updating...' : nextLabel}
       </button>
+
+      {/* Cancel button – only shown if onCancel provided and order not already completed/cancelled */}
+      {onCancel && (order.orderStatus === 'NEW' || order.orderStatus === 'PREPARING') && (
+        <button
+          onClick={handleCancel}
+          disabled={cancelling}
+          className="w-full mt-2 bg-red-500 text-white rounded-xl py-2 font-bold text-sm transition-all hover:bg-red-600 disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelling...' : 'Cancel Order'}
+        </button>
+      )}
     </div>
   );
 }

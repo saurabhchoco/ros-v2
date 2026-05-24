@@ -164,46 +164,57 @@ async function createOrder(data) {
   }
 }
 
-async function updateOrderStatus(
-  orderId,
-  status,
-  userContext
-) {
-
+async function updateOrderStatus(orderId, status, userContext, cancellationReason = null) {
   const validStatuses = [
-    'NEW',
-    'PREPARING',
-    'READY',
-    'COMPLETED',
-    'CANCELLED'
+    'NEW', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'
   ];
-
   if (!validStatuses.includes(status)) {
-    const error = new Error(
-      `Invalid status. Must be one of: ${validStatuses.join(', ')}`
-    );
+    const error = new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     error.statusCode = 400;
     throw error;
   }
 
-  const result = await pool.query(
-    `
-    UPDATE orders
-    SET
-      order_status = $1,
-      updated_at = NOW()
-    WHERE
-      id = $2
-    AND
-      organization_id = $3
-    RETURNING *
-    `,
-    [
-      status,
-      orderId,
-      userContext.organization_id
-    ]
+  // Fetch current order to check current status and authorization
+  const currentOrder = await pool.query(
+    `SELECT order_status, organization_id FROM orders WHERE id = $1`,
+    [orderId]
   );
+  if (!currentOrder.rows[0]) {
+    const error = new Error('Order not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (currentOrder.rows[0].organization_id !== userContext.organization_id) {
+    const error = new Error('Unauthorized');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const currentStatus = currentOrder.rows[0].order_status;
+
+  // Cancellation: only allowed from NEW or PREPARING
+  if (status === 'CANCELLED' && currentStatus !== 'NEW' && currentStatus !== 'PREPARING') {
+    const error = new Error('Order cannot be cancelled after preparation is complete');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Build dynamic UPDATE query
+  let query = `
+    UPDATE orders
+    SET order_status = $1,
+        updated_at = NOW()
+  `;
+  const params = [status, orderId, userContext.organization_id];
+
+  if (status === 'CANCELLED') {
+    query += `, cancelled_at = NOW(), cancellation_reason = $4`;
+    params.push(cancellationReason || null);
+  }
+
+  query += ` WHERE id = $2 AND organization_id = $3 RETURNING *`;
+
+  const result = await pool.query(query, params);
 
   if (!result.rows[0]) {
     const error = new Error('Order not found');
@@ -211,8 +222,8 @@ async function updateOrderStatus(
     throw error;
   }
 
+  // Update Firestore (KDS) and audit log
   await updateOrderInKDS(orderId, status);
-
   await createAuditLog({
     organizationId: userContext.organization_id,
     outletId: userContext.outlet_id,
@@ -220,11 +231,10 @@ async function updateOrderStatus(
     action: 'ORDER_STATUS_UPDATED',
     entityType: 'ORDER',
     entityId: orderId,
-    newValue: { status }
+    newValue: { status, cancellationReason }
   });
 
   return result.rows[0];
-
 }
 
 async function listOrders(

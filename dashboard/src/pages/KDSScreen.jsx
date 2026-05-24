@@ -6,6 +6,7 @@ import { apiService } from '../services/api';
 import OrderCard from '../components/OrderCard';
 import { useSoundAlert } from '../hooks/useSoundAlert';
 import Skeleton from '../components/ui/Skeleton';
+import toast from 'react-hot-toast'; // ✅ ADD THIS
 
 export default function KDSScreen() {
   const outlet = useAuthStore((s) => s.outlet);
@@ -48,6 +49,15 @@ export default function KDSScreen() {
       setStatsLoading(false);
     }
   };
+
+const handleCancel = async (orderId, reason) => {
+  try {
+    await apiService.updateOrderStatus(orderId, 'CANCELLED', reason);
+    toast.success('Order cancelled');
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to cancel order');
+  }
+};
 
   // Subscribe to real‑time orders
   useEffect(() => {
@@ -205,6 +215,7 @@ export default function KDSScreen() {
                     nextStatus={col.nextStatus}
                     btnColor={col.btnColor}
                     onStatusChange={handleStatusChange}
+                    onCancel={handleCancel}  // ✅ ADD THIS LINE
                   />
                 ))
               )}

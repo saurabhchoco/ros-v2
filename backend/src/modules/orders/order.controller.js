@@ -47,7 +47,7 @@ async function updateOrderStatus(
 ) {
 
   const { orderId } = request.params;
-  const { status } = request.body;
+  const { status, cancellationReason } = request.body;
 
   if (!status) {
     return reply.status(400).send({
@@ -60,7 +60,8 @@ async function updateOrderStatus(
     await orderService.updateOrderStatus(
       orderId,
       status,
-      request.userContext
+      request.userContext,
+      cancellationReason
     );
 
   return reply.send({

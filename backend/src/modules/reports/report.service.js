@@ -360,6 +360,33 @@ async function getDashboardSummary(organizationId, outletId = null) {
   const orderStatusCounts = {};
   statusRes.rows.forEach(row => { orderStatusCounts[row.order_status] = parseInt(row.count); });
 
+  // Cancellations today
+const cancelQuery = `
+  SELECT COUNT(*) as total_cancelled
+  FROM orders
+  WHERE organization_id = $1 AND DATE(created_at) = $2 AND order_status = 'CANCELLED'
+  ${outletId ? 'AND outlet_id = $3' : ''}
+`;
+const cancelRes = await pool.query(cancelQuery, params);
+
+// Cancellations by outlet (only for brand owner, not for single outlet)
+let cancellationsByOutlet = [];
+if (!outletId) {
+  const cancelByOutletQuery = `
+    SELECT o.id as outlet_id, o.name as outlet_name, COALESCE(COUNT(ord.id), 0) as cancelled_count
+    FROM outlets o
+    LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.order_status = 'CANCELLED' AND DATE(ord.created_at) = $1
+    WHERE o.organization_id = $2
+    GROUP BY o.id, o.name
+  `;
+  const cancelByOutletRes = await pool.query(cancelByOutletQuery, [today, organizationId]);
+  cancellationsByOutlet = cancelByOutletRes.rows.map(row => ({
+    outletId: row.outlet_id,
+    outletName: row.outlet_name,
+    cancelledCount: parseInt(row.cancelled_count)
+  }));
+}
+
   return {
     totalOrders: parseInt(orderRes.rows[0].total_orders || 0),
     totalRevenue: parseFloat(orderRes.rows[0].total_revenue || 0),
@@ -370,7 +397,9 @@ async function getDashboardSummary(organizationId, outletId = null) {
     paymentBreakdown: paymentRes.rows,
     orderSource: sourceRes.rows,
     paymentStatus: paidRes.rows[0],
-    orderStatus: orderStatusCounts
+    orderStatus: orderStatusCounts,
+    totalCancellations: parseInt(cancelRes.rows[0].total_cancelled || 0),
+    cancellationsByOutlet: cancellationsByOutlet
   };
 }
 

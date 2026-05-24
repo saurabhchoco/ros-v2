@@ -243,6 +243,19 @@ const updatedText = secondsSinceUpdate < 60 ? `${secondsSinceUpdate} sec ago` : 
                 </div>
               </div>
             </div>
+
+            {/* Cancelled Today */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover hover:-translate-y-0.5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-50 rounded-xl">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-500">Cancelled Today</p>
+                  <p className="text-3xl font-bold text-red-600">{summary.totalCancellations || 0}</p>
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -446,6 +459,7 @@ const updatedText = secondsSinceUpdate < 60 ? `${secondsSinceUpdate} sec ago` : 
       )}
 
       {/* Outlet Cards */}
+      
       <div className="flex items-center justify-between mt-8 mb-4">
         <div>
           <h2 className="text-2xl font-bold text-neutral-800">My Outlets</h2>
@@ -457,138 +471,146 @@ const updatedText = secondsSinceUpdate < 60 ? `${secondsSinceUpdate} sec ago` : 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredOutlets.map(out => {
           const outletStats = outletComparison.find(o => o.id === out.id);
+          const cancelledCount = summary?.cancellationsByOutlet?.find(c => c.outletId === out.id)?.cancelledCount || 0;
           return (
-<div key={out.id} className="bg-white/80 backdrop-blur-sm rounded-xl border-l-4 border-primary-500 shadow-soft p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-  {/* Header: Outlet name + health badge */}
-  <div className="flex justify-between items-start">
-    <div>
-      <h3 className="text-xl font-bold text-neutral-800">{out.name}</h3>
-      <p className="text-xs text-neutral-400 mt-0.5">{out.outlet_type}</p>
-    </div>
-    {outletStats ? (
-      outletStats.pendingOrders > 0 ? (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> ⚠ Delayed
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> 🟢 Healthy
-        </span>
-      )
-    ) : (
-      <span className="text-xs text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">Inactive</span>
-    )}
-  </div>
+            <div key={out.id} className="bg-white/80 backdrop-blur-sm rounded-xl border-l-4 border-primary-500 shadow-soft p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              {/* Header: Outlet name + health badge */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-neutral-800">{out.name}</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">{out.outlet_type}</p>
+                </div>
+                {outletStats ? (
+                  outletStats.pendingOrders > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> ⚠ Delayed
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> 🟢 Healthy
+                    </span>
+                  )
+                ) : (
+                  <span className="text-xs text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">Inactive</span>
+                )}
+              </div>
 
-  {outletStats ? (
-    <div className="mt-4 space-y-3">
-      {/* Revenue progress bar */}
-      <div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-neutral-600">Revenue</span>
-          <span className="font-semibold text-emerald-600">₹{Number(outletStats.revenue).toFixed(0)}</span>
-        </div>
-        <div className="w-full bg-neutral-200 rounded-full h-2">
-          <div
-            className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-            style={{ width: `${(outletStats.revenue / maxRevenue) * 100}%` }}
-          />
-        </div>
-      </div>
+              {outletStats ? (
+                <div className="mt-4 space-y-3">
+                  {/* Revenue progress bar */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-neutral-600">Revenue</span>
+                      <span className="font-semibold text-emerald-600">₹{Number(outletStats.revenue).toFixed(0)}</span>
+                    </div>
+                    <div className="w-full bg-neutral-200 rounded-full h-2">
+                      <div
+                        className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(outletStats.revenue / maxRevenue) * 100}%` }}
+                      />
+                    </div>
+                  </div>
 
-      {/* Orders progress bar */}
-      <div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-neutral-600">Orders</span>
-          <span className="font-semibold text-primary-600">{outletStats.orderCount}</span>
-        </div>
-        <div className="w-full bg-neutral-200 rounded-full h-2">
-          <div
-            className="bg-primary-500 h-2 rounded-full transition-all duration-500"
-            style={{ width: `${(outletStats.orderCount / maxOrders) * 100}%` }}
-          />
-        </div>
-      </div>
+                  {/* Orders progress bar */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-neutral-600">Orders</span>
+                      <span className="font-semibold text-primary-600">{outletStats.orderCount}</span>
+                    </div>
+                    <div className="w-full bg-neutral-200 rounded-full h-2">
+                      <div
+                        className="bg-primary-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(outletStats.orderCount / maxOrders) * 100}%` }}
+                      />
+                    </div>
+                  </div>
 
-      {/* Avg Order and Pending as separate rows */}
-      <div className="flex justify-between items-baseline pt-1 text-sm">
-        <div>
-          <span className="text-neutral-500">Avg Order</span>
-          <p className="text-base font-semibold text-purple-600 mt-1">₹{Number(outletStats.avgOrderValue).toFixed(0)}</p>
-        </div>
-        <div>
-          <span className="text-neutral-500">Pending</span>
-          <p className={`text-base font-semibold mt-1 ${outletStats.pendingOrders > 0 ? 'text-orange-600' : 'text-neutral-400'}`}>
-            {outletStats.pendingOrders}
-          </p>
-        </div>
-      </div>
-    </div>
-  ) : (
-    <p className="text-neutral-400 text-sm mt-4">No orders today</p>
-  )}
+                  {/* Avg Order and Pending as separate rows */}
+                  <div className="flex justify-between items-baseline pt-1 text-sm">
+                    <div>
+                      <span className="text-neutral-500">Avg Order</span>
+                      <p className="text-base font-semibold text-purple-600 mt-1">₹{Number(outletStats.avgOrderValue).toFixed(0)}</p>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500">Pending</span>
+                      <p className={`text-base font-semibold mt-1 ${outletStats.pendingOrders > 0 ? 'text-orange-600' : 'text-neutral-400'}`}>
+                        {outletStats.pendingOrders}
+                      </p>
+                    </div>
 
-  {/* Action Buttons */}
-  <div className="flex gap-2 mt-5">
-    <button onClick={() => navigate(`/owner/menu?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-200 transition">Menu</button>
-    <button onClick={() => navigate(`/owner/managers?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-200 transition">Managers</button>
-    <button onClick={() => navigate(`/owner/outlet-analytics?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition">Analytics</button>
-  </div>
-</div>
+                    <div>
+                      <span className="text-xs text-neutral-500">Cancelled</span>
+                      <p className={`text-sm font-semibold ${cancelledCount > 0 ? 'text-red-600' : 'text-neutral-400'}`}>
+                        {cancelledCount}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-neutral-400 text-sm mt-4">No orders today</p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 mt-5">
+                <button onClick={() => navigate(`/owner/menu?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-200 transition">Menu</button>
+                <button onClick={() => navigate(`/owner/managers?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-200 transition">Managers</button>
+                <button onClick={() => navigate(`/owner/outlet-analytics?outlet=${out.id}`)} className="flex-1 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition">Analytics</button>
+              </div>
+            </div>
           );
         })}
         {filteredOutlets.length === 0 && <div className="text-center text-neutral-400 py-16 col-span-2">No outlets match your search.</div>}
       </div>
 
       {/* Outlet Performance Table */}
-{outletComparison.length > 0 && (
-  <div className="mt-8">
-    <h3 className="text-lg font-semibold text-neutral-800 mb-4">🏆 Outlet Highlights</h3>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Top Revenue Card */}
-      <div className="bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🏆</span>
-          <h4 className="font-semibold text-neutral-700">Top Revenue</h4>
-        </div>
-        <p className="text-2xl font-bold text-emerald-600">
-          ₹{Math.max(...outletComparison.map(o => o.revenue)).toFixed(0)}
-        </p>
-        <p className="text-sm text-neutral-500 mt-1">
-          {outletComparison.find(o => o.revenue === Math.max(...outletComparison.map(o => o.revenue)))?.name}
-        </p>
-      </div>
+      {outletComparison.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-neutral-800 mb-4">🏆 Outlet Highlights</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Top Revenue Card */}
+            <div className="bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🏆</span>
+                <h4 className="font-semibold text-neutral-700">Top Revenue</h4>
+              </div>
+              <p className="text-2xl font-bold text-emerald-600">
+                ₹{Math.max(...outletComparison.map(o => o.revenue)).toFixed(0)}
+              </p>
+              <p className="text-sm text-neutral-500 mt-1">
+                {outletComparison.find(o => o.revenue === Math.max(...outletComparison.map(o => o.revenue)))?.name}
+              </p>
+            </div>
 
-      {/* Highest AOV Card */}
-      <div className="bg-gradient-to-br from-purple-50/80 to-purple-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">⚡</span>
-          <h4 className="font-semibold text-neutral-700">Highest AOV</h4>
-        </div>
-        <p className="text-2xl font-bold text-purple-600">
-          ₹{Math.max(...outletComparison.map(o => o.avgOrderValue)).toFixed(0)}
-        </p>
-        <p className="text-sm text-neutral-500 mt-1">
-          {outletComparison.find(o => o.avgOrderValue === Math.max(...outletComparison.map(o => o.avgOrderValue)))?.name}
-        </p>
-      </div>
+            {/* Highest AOV Card */}
+            <div className="bg-gradient-to-br from-purple-50/80 to-purple-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">⚡</span>
+                <h4 className="font-semibold text-neutral-700">Highest AOV</h4>
+              </div>
+              <p className="text-2xl font-bold text-purple-600">
+                ₹{Math.max(...outletComparison.map(o => o.avgOrderValue)).toFixed(0)}
+              </p>
+              <p className="text-sm text-neutral-500 mt-1">
+                {outletComparison.find(o => o.avgOrderValue === Math.max(...outletComparison.map(o => o.avgOrderValue)))?.name}
+              </p>
+            </div>
 
-      {/* Most Orders Card */}
-      <div className="bg-gradient-to-br from-orange-50/80 to-orange-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">📦</span>
-          <h4 className="font-semibold text-neutral-700">Most Orders</h4>
+            {/* Most Orders Card */}
+            <div className="bg-gradient-to-br from-orange-50/80 to-orange-100/50 backdrop-blur-sm rounded-xl border border-white/20 shadow-soft p-5 transition-all hover:shadow-hover">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📦</span>
+                <h4 className="font-semibold text-neutral-700">Most Orders</h4>
+              </div>
+              <p className="text-2xl font-bold text-orange-600">
+                {Math.max(...outletComparison.map(o => o.orderCount))}
+              </p>
+              <p className="text-sm text-neutral-500 mt-1">
+                {outletComparison.find(o => o.orderCount === Math.max(...outletComparison.map(o => o.orderCount)))?.name}
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-2xl font-bold text-orange-600">
-          {Math.max(...outletComparison.map(o => o.orderCount))}
-        </p>
-        <p className="text-sm text-neutral-500 mt-1">
-          {outletComparison.find(o => o.orderCount === Math.max(...outletComparison.map(o => o.orderCount)))?.name}
-        </p>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }
