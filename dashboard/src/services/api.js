@@ -178,6 +178,9 @@ async getInventoryHealth() {
 },
 async getLowStockItems() {
   return axios.get(`${API_URL}/inventory/low-stock`, { headers: await getAuthHeaders() });
+},
+async settleOrder(orderId, paymentMethod) {
+  return axios.post(`${API_URL}/orders/${orderId}/settle`, { paymentMethod }, { headers: await getAuthHeaders() });
 }
 
 };

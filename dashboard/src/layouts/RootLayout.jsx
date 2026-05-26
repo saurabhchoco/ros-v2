@@ -17,20 +17,46 @@ export default function RootLayout() {
 const role = outlet?.role;
 
 const navItems = [
-  // Operational pages: only for outlet staff
-  ...(role === 'OUTLET_MANAGER' || role === 'KITCHEN' ? [
+  // Kitchen ONLY → KDS Board
+  ...(role === 'KITCHEN' ? [
+    { path: '/kds', label: 'KDS Board' }
+  ] : []),
+  
+    // CASHIER only
+  ...(role === 'CASHIER' ? [{ path: '/orders', label: 'Orders' }] : []),
+
+  // GSA only
+  ...(role === 'GSA' ? [{ path: '/orders', label: 'Orders' }, { path: '/captain', label: 'Captain' }] : []),
+
+  // ARM (Assistant Restaurant Manager)
+  ...(role === 'ARM' ? [
     { path: '/kds', label: 'KDS Board' },
     { path: '/orders', label: 'Orders' },
-    { path: '/reports', label: 'Reports' }
+    { path: '/reports', label: 'Reports' },
+    { path: '/captain', label: 'Captain' }
   ] : []),
-  // Captain page: for captain + managers (order taking)
-  ...(role === 'CAPTAIN' || role === 'OUTLET_MANAGER' || role === 'KITCHEN'
-    ? [{ path: '/captain', label: 'Captain' }]
-    : []),
-  // Admin (Super Admin only)
-  ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
+
+  // Outlet Manager → KDS, Orders, Reports, Captain
+  ...(role === 'OUTLET_MANAGER' ? [
+    { path: '/kds', label: 'KDS Board' },
+    { path: '/orders', label: 'Orders' },
+    { path: '/reports', label: 'Reports' },
+    { path: '/captain', label: 'Captain' }
+  ] : []),
+
+  // Captain ONLY → Captain screen
+  ...(role === 'CAPTAIN' ? [
+    { path: '/captain', label: 'Captain' }
+  ] : []),
+
+  // Super Admin
+  ...(role === 'SUPER_ADMIN' ? [
+    { path: '/admin', label: '⚙️ Admin' }
+  ] : []),
+
   // Brand Owner
-  ...(role === 'BRAND_OWNER' ? [{ path: '/owner', label: '🏪 My Outlets' },
+  ...(role === 'BRAND_OWNER' ? [
+    { path: '/owner', label: '🏪 My Outlets' },
     { path: '/owner/analytics', label: '📊 Analytics' }
   ] : [])
 ];

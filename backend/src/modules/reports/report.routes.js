@@ -67,7 +67,7 @@ async function reportRoutes(app) {
   }, reportController.getOutletComparison);
 
   app.get('/api/v1/dashboard/summary', {
-    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['OUTLET_MANAGER', 'BRAND_OWNER'])]
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['OUTLET_MANAGER', 'BRAND_OWNER', 'ARM'])]
   }, reportController.getDashboardSummary);
 
 }

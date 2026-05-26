@@ -251,10 +251,25 @@ console.log('Calling inventory deduction for order', orderId);
   }
 }
 
+async function settleOrder(request, reply) {
+  const { orderId } = request.params;
+  const { paymentMethod } = request.body;
+  if (!paymentMethod) {
+    return reply.status(400).send({ success: false, message: 'paymentMethod required' });
+  }
+  try {
+    const order = await orderService.settleOrder(orderId, paymentMethod, request.userContext.id);
+    return reply.send({ success: true, data: order });
+  } catch (err) {
+    return reply.status(400).send({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   createOrder,
   updateOrderStatus,
   listOrders,
   getOrderById,
-  createPublicOrder
+  createPublicOrder,
+  settleOrder
 };

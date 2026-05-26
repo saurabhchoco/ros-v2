@@ -396,10 +396,46 @@ async function generateToken(outletId) {
   }
 }
 
+async function settleOrder(orderId, paymentMethod, userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE orders
+       SET payment_status = 'PAID',
+           payment_method = $1,
+           updated_at = NOW()
+       WHERE id = $2 AND payment_status != 'PAID'
+       RETURNING *`,
+      [paymentMethod, orderId]
+    );
+    if (!result.rows[0]) {
+      throw new Error('Order not found or already settled');
+    }
+    await createAuditLog({
+      organizationId: result.rows[0].organization_id,
+      outletId: result.rows[0].outlet_id,
+      userId: userId,
+      action: 'ORDER_SETTLED',
+      entityType: 'ORDER',
+      entityId: orderId,
+      newValue: { paymentMethod, status: 'PAID' }
+    });
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createOrder,
   updateOrderStatus,
   listOrders,
   getOrderById,
-  generateToken
+  generateToken,
+  settleOrder
 };

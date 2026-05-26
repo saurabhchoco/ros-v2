@@ -1,44 +1,36 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { getTenantContext } from '../../utils/tenantContext';
 import { adminApi } from '../../services/adminApi';
 
 export default function CreateManager() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preselectedOrg = searchParams.get('org') || '';
   const preselectedOutlet = searchParams.get('outlet') || '';
 
+  const outlet = useAuthStore((s) => s.outlet);
+  const { organizationId } = getTenantContext(outlet);
+
+  const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [outletName, setOutletName] = useState('');
-  const [brandName, setBrandName] = useState('');
+  const [role, setRole] = useState('OUTLET_MANAGER');
   const [form, setForm] = useState({
-    organizationId: preselectedOrg,
+    organizationId: organizationId,
     outletId: preselectedOutlet,
     fullName: '',
     email: '',
     password: ''
   });
 
-  // Fetch brand and outlet names for display
+  // Load outlets for this brand owner
   useEffect(() => {
-    if (preselectedOrg) {
-      adminApi.listBrands()
-        .then(res => {
-          const brand = res.data.data?.find(b => b.id === preselectedOrg);
-          if (brand) setBrandName(brand.name);
-        })
-        .catch(console.error);
-    }
-    if (preselectedOutlet && preselectedOrg) {
-      adminApi.listOutlets(preselectedOrg)
-        .then(res => {
-          const outlet = res.data.data?.find(o => o.id === preselectedOutlet);
-          if (outlet) setOutletName(outlet.name);
-        })
-        .catch(console.error);
-    }
-  }, [preselectedOrg, preselectedOutlet]);
+    if (!organizationId) return;
+    adminApi.listOutlets(organizationId, true)
+      .then(res => setOutlets(res.data.data || []))
+      .catch(console.error);
+  }, [organizationId]);
 
   const set = (field) => (e) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -48,9 +40,9 @@ export default function CreateManager() {
     setError('');
     setLoading(true);
     try {
-      await adminApi.createOutletManager(form);
-      // Navigate back to outlet list
-      navigate(`/admin/outlets?org=${preselectedOrg}`);
+      const payload = { ...form, role };
+      await adminApi.createOutletManager(payload);
+      navigate(`/owner/managers?outlet=${form.outletId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create manager');
     } finally {
@@ -60,7 +52,10 @@ export default function CreateManager() {
 
   return (
     <div className="p-6 max-w-lg mx-auto">
-      <button onClick={() => navigate(-1)} className="text-indigo-500 text-sm font-medium mb-6">
+      <button
+        onClick={() => navigate(-1)}
+        className="text-indigo-500 text-sm font-medium mb-6 flex items-center gap-1 hover:underline"
+      >
         ← Back
       </button>
 
@@ -68,28 +63,41 @@ export default function CreateManager() {
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Hidden fields to prevent autofill */}
-          <input type="email" style={{ display: 'none' }} />
-          <input type="password" style={{ display: 'none' }} />
-
-          {/* Brand - show as label when preselected */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
-              {brandName || 'Loading...'}
-            </div>
-          </div>
-
-          {/* Outlet - show as label */}
+          {/* Outlet dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Outlet</label>
-            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
-              {outletName || 'Loading...'}
-            </div>
+            <select
+              value={form.outletId}
+              onChange={set('outletId')}
+              required
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+            >
+              <option value="">Select outlet</option>
+              {outlets.map(o => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Role dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+            >
+              <option value="OUTLET_MANAGER">Outlet Manager</option>
+              <option value="ARM">Assistant Restaurant Manager (ARM)</option>
+              <option value="GSA">Guest Service Associate (GSA)</option>
+              <option value="CASHIER">Cashier</option>
+              <option value="CAPTAIN">Captain</option>
+              <option value="KITCHEN">Kitchen</option>
+            </select>
           </div>
 
           <div className="border-t border-gray-100 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-gray-600">Manager Account</p>
+            <p className="text-sm font-semibold text-gray-600">Account Details</p>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -111,7 +119,6 @@ export default function CreateManager() {
                 onChange={set('email')}
                 placeholder="manager@outlet.com"
                 required
-                autoComplete="off"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
@@ -125,7 +132,6 @@ export default function CreateManager() {
                 placeholder="Min 8 characters"
                 required
                 minLength={8}
-                autoComplete="new-password"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
@@ -142,7 +148,7 @@ export default function CreateManager() {
             disabled={loading}
             className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
           >
-            {loading ? 'Creating...' : 'Create Manager Account'}
+            {loading ? 'Creating...' : 'Create Account'}
           </button>
         </form>
       </div>

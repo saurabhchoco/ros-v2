@@ -71,59 +71,40 @@ async function createOutletManager(
 
       `
       INSERT INTO users (
-
         id,
         firebase_uid,
-
         organization_id,
         outlet_id,
-
         full_name,
         email,
-
         role,
         status,
-
         created_at,
         updated_at
-
       )
-
       VALUES (
-
         $1,
         $2,
-
         $3,
         $4,
-
         $5,
         $6,
-
-        'OUTLET_MANAGER',
+        $7,
         'ACTIVE',
-
         NOW(),
         NOW()
-
       )
-
       RETURNING *
       `,
-
       [
-
         userId,
         firebaseUid,
-
         data.organizationId,
         data.outletId,
-
         data.fullName,
-        data.email
-
+        data.email,
+        data.role || 'OUTLET_MANAGER'
       ]
-
     );
 
   return result.rows[0];

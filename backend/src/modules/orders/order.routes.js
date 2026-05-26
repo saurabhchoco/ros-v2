@@ -20,7 +20,7 @@ async function orderRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
-        roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER']),
+        roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']),
         orderAccessMiddleware
       ]
     },
@@ -32,7 +32,8 @@ async function orderRoutes(app) {
     {
       preHandler: [
         authMiddleware,
-        userContextMiddleware
+        userContextMiddleware,
+        roleMiddleware(['OUTLET_MANAGER', 'ARM', 'GSA', 'CASHIER'])
       ]
     },
     orderController.listOrders
@@ -55,11 +56,20 @@ async function orderRoutes(app) {
       preHandler: [
         authMiddleware,
         syncClaims,
-        userContextMiddleware
+        userContextMiddleware,
+        roleMiddleware(['KITCHEN', 'OUTLET_MANAGER', 'ARM'])
       ]
     },
     orderController.updateOrderStatus
   );
+
+  app.post('/api/v1/orders/:orderId/settle', {
+    preHandler: [
+      authMiddleware,
+      userContextMiddleware,
+      roleMiddleware(['CASHIER', 'ARM', 'OUTLET_MANAGER'])
+    ]
+  }, orderController.settleOrder);
 
   // ✅ NEW: Public order creation (no authentication)
   app.post('/api/v1/public/orders', orderController.createPublicOrder);

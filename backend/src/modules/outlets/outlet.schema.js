@@ -18,24 +18,19 @@ const createOutletSchema = z.object({
 
 const createOutletManagerSchema =
   z.object({
-
     organizationId:
       z.string(),
-
     outletId:
       z.string(),
-
     fullName:
       z.string()
         .min(2),
-
     email:
       z.email(),
-
     password:
       z.string()
-        .min(6)
-
+        .min(6),
+    role: z.enum(['OUTLET_MANAGER', 'CAPTAIN', 'KITCHEN', 'CASHIER', 'GSA', 'ARM']).default('OUTLET_MANAGER')
   });
 
 module.exports = {

@@ -47,7 +47,7 @@ export const router = createBrowserRouter([
       {
         path: 'kds',
         element: (
-          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN']}>
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'ARM']}>
             <KDSScreen />
           </ProtectedRoute>
         )
@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
       {
         path: 'orders',
         element: (
-          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'BRAND_OWNER']}>
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'ARM', 'GSA', 'CASHIER']}>
             <OrdersList />
           </ProtectedRoute>
         )
@@ -63,7 +63,7 @@ export const router = createBrowserRouter([
       {
         path: 'reports',
         element: (
-          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'BRAND_OWNER']}>
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'ARM']}>
             <Reports />
           </ProtectedRoute>
         )
@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
       {
         path: 'captain',
         element: (
-          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER']}>
+          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']}>
             <Captain />
           </ProtectedRoute>
         )
