@@ -15,6 +15,7 @@ function roleMiddleware(allowedRoles = []) {
 
     const userRole = userContext.role;
 
+console.log('🔍 roleMiddleware - userRole:', userRole, '| allowedRoles:', allowedRoles);
     // SUPER_ADMIN bypasses all role checks
     if (userRole === ROLES.SUPER_ADMIN) {
       return;

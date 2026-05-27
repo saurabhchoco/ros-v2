@@ -11,6 +11,7 @@ const userContextMiddleware =
 const orderAccessMiddleware =
   require('../../middleware/orderAccessMiddleware');
 const { z } = require('zod');
+const activeShiftRequired = require('../../middleware/activeShiftRequired');
 
 async function orderRoutes(app) {
 
@@ -21,7 +22,8 @@ async function orderRoutes(app) {
         authMiddleware,
         userContextMiddleware,
         roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']),
-        orderAccessMiddleware
+        orderAccessMiddleware,
+        activeShiftRequired
       ]
     },
     orderController.createOrder
@@ -57,7 +59,8 @@ async function orderRoutes(app) {
         authMiddleware,
         syncClaims,
         userContextMiddleware,
-        roleMiddleware(['KITCHEN', 'OUTLET_MANAGER', 'ARM'])
+        roleMiddleware(['KITCHEN', 'OUTLET_MANAGER', 'ARM', 'GSA']),
+        activeShiftRequired
       ]
     },
     orderController.updateOrderStatus
@@ -67,7 +70,8 @@ async function orderRoutes(app) {
     preHandler: [
       authMiddleware,
       userContextMiddleware,
-      roleMiddleware(['CASHIER', 'ARM', 'OUTLET_MANAGER'])
+      roleMiddleware(['CASHIER', 'ARM', 'OUTLET_MANAGER']),
+      activeShiftRequired
     ]
   }, orderController.settleOrder);
 

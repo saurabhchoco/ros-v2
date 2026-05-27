@@ -13,9 +13,10 @@ const {
 } = require('../kds/kdsRealtime.service');
 
 const inventoryService = require('../inventory/inventory.service');
+const { getActiveShiftForUser } = require('../shift/shift.service');
 
-async function createOrder(data) {
-
+async function createOrder(data, userId = null) {
+console.log('createOrder called with userId:', userId);
   const client = await pool.connect();
 
   try {
@@ -44,6 +45,20 @@ async function createOrder(data) {
       taxAmount -
       discountAmount;
 
+    let assignedToUserId = userId;          // fallback
+    let shiftSessionId = null;
+
+    if (userId) {
+      const activeShift = await getActiveShiftForUser(userId);
+        console.log('activeShift found:', activeShift);
+      if (activeShift) {
+        assignedToUserId = userId;
+        shiftSessionId = activeShift.id;
+      } else {
+        // Log warning – user has no active shift
+        console.warn(`User ${userId} has no active shift when creating order`);
+      }
+    }
     const orderQuery = `
       INSERT INTO orders (
         id,
@@ -61,11 +76,14 @@ async function createOrder(data) {
         discount_amount,
         grand_total,
         payment_status,
-        payment_method
+        payment_method,
+        created_by,
+        assigned_to_user_id,
+        shift_session_id
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,
-        $7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+        $7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
       )
       RETURNING *
     `;
@@ -86,7 +104,10 @@ async function createOrder(data) {
       discountAmount,
       grandTotal,
       'PENDING',
-      data.paymentMethod || 'CASH'
+      data.paymentMethod || 'CASH',
+      userId,
+      assignedToUserId,
+      shiftSessionId  
     ];
 
     const orderResult =
@@ -139,7 +160,7 @@ async function createOrder(data) {
         outletId:
             data.outletId,
         userId:
-            data.createdBy || null,
+            userId || null,
         action:
             'ORDER_CREATED',
         entityType:
@@ -366,15 +387,7 @@ async function generateToken(outletId) {
     );
     
     const newNumber = result.rows[0].current_number;
-    
-    // Deduct inventory
-    // await inventoryService.deductIngredientsForOrderItems(
-    //   validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
-    //   data.organizationId,
-    //   data.outletId,
-    //   orderId,
-    //   data.createdBy || null`
-    // );
+  
 
     await client.query('COMMIT');
     

@@ -10,14 +10,16 @@ export default function OrdersList() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const orgId = outlet?.organizationId;
+  const outId = outlet?.outletId;
 
-  useEffect(() => {
-    if (!outlet?.organizationId || !outlet?.outletId) {
-      setLoading(false);
-      return;
-    }
-    fetchOrders();
-  }, [outlet, filter]);
+useEffect(() => {
+  if (!orgId || !outId) {
+    setLoading(false);
+    return;
+  }
+  fetchOrders();
+}, [orgId, outId, filter]); // ✅ use primitive values, not the whole outlet object
 
   const fetchOrders = async () => {
     try {

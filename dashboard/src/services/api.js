@@ -117,70 +117,123 @@ export const apiService = {
   },
 
   // Public methods (no auth headers)
-async getPublicOutlet(outletId) {
-  return axios.get(`${API_URL}/public/outlet/${outletId}`);
-},
-async getPublicCategories(organizationId, outletId) {
-  return axios.get(`${API_URL}/public/categories?organizationId=${organizationId}&outletId=${outletId}`);
-},
-async getPublicMenuItems(organizationId, outletId, categoryId = null) {
-  let url = `${API_URL}/public/items?organizationId=${organizationId}&outletId=${outletId}`;
-  if (categoryId) url += `&categoryId=${categoryId}`;
-  return axios.get(url);
-},
-async createPublicOrder(data) {
-  return axios.post(`${API_URL}/public/orders`, data);
-},
+  async getPublicOutlet(outletId) {
+    return axios.get(`${API_URL}/public/outlet/${outletId}`);
+  },
+  async getPublicCategories(organizationId, outletId) {
+    return axios.get(`${API_URL}/public/categories?organizationId=${organizationId}&outletId=${outletId}`);
+  },
+  async getPublicMenuItems(organizationId, outletId, categoryId = null) {
+    let url = `${API_URL}/public/items?organizationId=${organizationId}&outletId=${outletId}`;
+    if (categoryId) url += `&categoryId=${categoryId}`;
+    return axios.get(url);
+  },
+  async createPublicOrder(data) {
+    return axios.post(`${API_URL}/public/orders`, data);
+  },
 
-async vendorAuth(outletId, pin) {
-  return axios.post(`${API_URL}/vendor/auth`, { outletId, pin });
-},
+  async vendorAuth(outletId, pin) {
+    return axios.post(`${API_URL}/vendor/auth`, { outletId, pin });
+  },
 
-async getKitchenStats(organizationId, outletId) {
-  return axios.get(`${API_URL}/kitchen/stats`, {
-    headers: await getAuthHeaders(),
-    params: { organizationId, outletId } // if needed; but backend uses userContext
+  async getKitchenStats(organizationId, outletId) {
+    return axios.get(`${API_URL}/kitchen/stats`, {
+      headers: await getAuthHeaders(),
+      params: { organizationId, outletId } // if needed; but backend uses userContext
+    });
+  },
+
+  async getRevenueTrend(organizationId) {
+    return axios.get(`${API_URL}/brand/revenue-trend`, { headers: await getAuthHeaders(), params: { organizationId } });
+  },
+  async getOrderStatusDistribution(organizationId) {
+    return axios.get(`${API_URL}/brand/order-status`, { headers: await getAuthHeaders(), params: { organizationId } });
+  },
+  async getOutletComparison(organizationId) {
+    return axios.get(`${API_URL}/brand/outlet-comparison`, { headers: await getAuthHeaders(), params: { organizationId } });
+  },
+
+  async getDashboardSummary() {
+    return axios.get(`${API_URL}/dashboard/summary`, { headers: await getAuthHeaders() });
+  },
+
+  // Inventory
+  async getInventory() {
+    return axios.get(`${API_URL}/inventory`, { headers: await getAuthHeaders() });
+  },
+  async getInventoryItem(id) {
+    return axios.get(`${API_URL}/inventory/${id}`, { headers: await getAuthHeaders() });
+  },
+  async createInventoryItem(data) {
+    return axios.post(`${API_URL}/inventory`, data, { headers: await getAuthHeaders() });
+  },
+  async updateInventoryItem(id, data) {
+    return axios.put(`${API_URL}/inventory/${id}`, data, { headers: await getAuthHeaders() });
+  },
+  async adjustInventoryStock(id, change, reason, source = 'MANUAL', referenceId = null) {
+    return axios.post(`${API_URL}/inventory/${id}/adjust`, { change, reason, source, referenceId }, { headers: await getAuthHeaders() });
+  },
+  async getInventoryHealth() {
+    return axios.get(`${API_URL}/inventory/health`, { headers: await getAuthHeaders() });
+  },
+  async getLowStockItems() {
+    return axios.get(`${API_URL}/inventory/low-stock`, { headers: await getAuthHeaders() });
+  },
+  async settleOrder(orderId, paymentMethod) {
+    return axios.post(`${API_URL}/orders/${orderId}/settle`, { paymentMethod }, { headers: await getAuthHeaders() });
+  },
+
+async listActiveUsers(outletId) {
+  return axios.get(`${API_URL}/shift/active-users`, {
+    params: { outletId },
+    headers: await getAuthHeaders()   // ✅ use the standalone function, not this.getAuthHeaders
   });
 },
 
-async getRevenueTrend(organizationId) {
-  return axios.get(`${API_URL}/brand/revenue-trend`, { headers: await getAuthHeaders(), params: { organizationId } });
-},
-async getOrderStatusDistribution(organizationId) {
-  return axios.get(`${API_URL}/brand/order-status`, { headers: await getAuthHeaders(), params: { organizationId } });
-},
-async getOutletComparison(organizationId) {
-  return axios.get(`${API_URL}/brand/outlet-comparison`, { headers: await getAuthHeaders(), params: { organizationId } });
-},
+  async getExpectedCash(shiftSessionId) {
+    return axios.get(`${API_URL}/shift/expected-cash`, {
+      params: { shiftSessionId },
+      headers: await this.getAuthHeaders()
+    });
+  },
 
-async getDashboardSummary() {
-  return axios.get(`${API_URL}/dashboard/summary`, { headers: await getAuthHeaders() });
-},
+  async handoverShift(data) {
+    return axios.post(`${API_URL}/shift/handover`, data, { 
+      headers: await getAuthHeaders() });
+  },
 
-// Inventory
-async getInventory() {
-  return axios.get(`${API_URL}/inventory`, { headers: await getAuthHeaders() });
-},
-async getInventoryItem(id) {
-  return axios.get(`${API_URL}/inventory/${id}`, { headers: await getAuthHeaders() });
-},
-async createInventoryItem(data) {
-  return axios.post(`${API_URL}/inventory`, data, { headers: await getAuthHeaders() });
-},
-async updateInventoryItem(id, data) {
-  return axios.put(`${API_URL}/inventory/${id}`, data, { headers: await getAuthHeaders() });
-},
-async adjustInventoryStock(id, change, reason, source = 'MANUAL', referenceId = null) {
-  return axios.post(`${API_URL}/inventory/${id}/adjust`, { change, reason, source, referenceId }, { headers: await getAuthHeaders() });
-},
-async getInventoryHealth() {
-  return axios.get(`${API_URL}/inventory/health`, { headers: await getAuthHeaders() });
-},
-async getLowStockItems() {
-  return axios.get(`${API_URL}/inventory/low-stock`, { headers: await getAuthHeaders() });
-},
-async settleOrder(orderId, paymentMethod) {
-  return axios.post(`${API_URL}/orders/${orderId}/settle`, { paymentMethod }, { headers: await getAuthHeaders() });
-}
+  async startShift(data) {
+    return axios.post(`${API_URL}/shift/start`, data, {
+      headers: await getAuthHeaders()
+    });
+  },
 
+  async getActiveShift() {
+    // Optional: fetch current active shift for the user
+    return axios.get(`${API_URL}/shift/active`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async endShift() {
+    return axios.post(`${API_URL}/shift/end`, {}, { headers: await getAuthHeaders() });
+  },
+
+  async getOutletUsers(outletId) {
+    return axios.get(`${API_URL}/users/outlet/${outletId}`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async getOutletStaff(outletId) {
+    return axios.get(`${API_URL}/users/outlet/${outletId}/staff`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async getOutletStaffKPIs(outletId) {
+    return axios.get(`${API_URL}/users/outlet/${outletId}/staff/kpis`, {
+      headers: await getAuthHeaders()
+    });
+  }
 };

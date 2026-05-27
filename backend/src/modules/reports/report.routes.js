@@ -48,7 +48,7 @@ async function reportRoutes(app) {
     preHandler: [
       authMiddleware,
       userContextMiddleware,
-      roleMiddleware(['OUTLET_MANAGER', 'KITCHEN'])
+      roleMiddleware(['OUTLET_MANAGER', 'KITCHEN', 'ARM'])
     ]
   },
     reportController.getKitchenStats
@@ -59,7 +59,7 @@ async function reportRoutes(app) {
   }, reportController.getRevenueTrend);
 
   app.get('/api/v1/brand/order-status', {
-    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER'])]
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'ARM'])]
   }, reportController.getOrderStatusDistribution);
 
   app.get('/api/v1/brand/outlet-comparison', {

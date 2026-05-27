@@ -10,30 +10,23 @@ const {
 const orderService =
   require('./order.service');
 
-async function createOrder(
-  request,
-  reply
-) {
-
-  const parsed =
-    createOrderSchema.safeParse(
-      request.body
-    );
-
+async function createOrder(request, reply) {
+  const parsed = createOrderSchema.safeParse(request.body);
   if (!parsed.success) {
-
     return reply.status(400).send({
       success: false,
       message: 'Validation failed',
       error: parsed.error
     });
-
   }
 
-  const order =
-    await orderService.createOrder(
-      parsed.data
-    );
+  // ✅ Get user ID from request.user (attached by authMiddleware)
+  const userId = request.user?.id || request.userContext?.id;
+  if (!userId) {
+    return reply.status(401).send({ success: false, message: 'User not authenticated' });
+  }
+
+  const order = await orderService.createOrder(parsed.data, userId);
 
   return reply.send({
     success: true,

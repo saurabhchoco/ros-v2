@@ -18,7 +18,7 @@ import OutletsList from '../pages/admin/OutletsList';
 import BrandOwnerDashboard from '../pages/owner/BrandOwnerDashboard';
 import CreateOwnerOutlet from '../pages/owner/CreateOutlet';
 import MenuManagement from '../pages/owner/MenuManagement';
-import AssignManagers from '../pages/owner/AssignManagers';
+// import AssignManagers from '../pages/owner/AssignManagers';
 
 import DashboardRedirect from '../components/DashboardRedirect';
 
@@ -29,6 +29,8 @@ import PublicOrder from '../pages/PublicOrder';
 import VendorScreen from '../pages/VendorScreen';
 
 import InventoryList from '../pages/InventoryList';
+import ShiftHandover from '../pages/ShiftHandover';
+import OutletStaff from '../pages/owner/OutletStaff';
 
 export const router = createBrowserRouter([
   {
@@ -150,14 +152,14 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
-      {
-        path: 'owner/managers',
-        element: (
-          <ProtectedRoute roles={['BRAND_OWNER']}>
-            <AssignManagers />
-          </ProtectedRoute>
-        )
-      },
+      // {
+      //   path: 'owner/managers',
+      //   element: (
+      //     <ProtectedRoute roles={['BRAND_OWNER']}>
+      //       <AssignManagers />
+      //     </ProtectedRoute>
+      //   )
+      // },
       {
         path: 'owner/managers/create',
         element: (
@@ -189,6 +191,24 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['BRAND_OWNER', 'OUTLET_MANAGER']}>
             <InventoryList />
+          </ProtectedRoute>
+        )
+      },
+
+      {
+        path: 'shift-handover',
+        element: (
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'ARM', 'CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN']}>
+            <ShiftHandover />
+          </ProtectedRoute>
+        )
+      },
+
+      {
+        path: 'owner/managers',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <OutletStaff />
           </ProtectedRoute>
         )
       }

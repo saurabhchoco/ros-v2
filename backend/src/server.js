@@ -14,6 +14,7 @@ const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
 const inventoryRoutes = require('./modules/inventory/inventory.routes');
+const shiftRoutes = require('./modules/shift/shift.routes');
 
 const helmet =
   require('@fastify/helmet');
@@ -29,29 +30,6 @@ const app = Fastify({
 });
 
 app.register(multipart);
-
-// app.register(cors, {
-//   // origin: true,
-//   origin: [
-
-//     'http://localhost:5173',
-
-//     /^https:\/\/.*-5173\.app\.github\.dev$/,
-
-//     /^https:\/\/.*-3000\.app\.github\.dev$/,
-
-//   ],
-//   methods: [
-//     'GET',
-//     'POST',
-//     'PATCH',
-//     'PUT',
-//     'DELETE',
-//     'OPTIONS'
-//   ],
-//   allowedHeaders: ['Content-Type', 'Authorization'],
-//   credentials: true
-// });
 
 app.register(cors, {
 
@@ -156,7 +134,7 @@ app.register(reportRoutes);
 app.register(menuRoutes);
 app.register(adminRoutes);
 app.register(inventoryRoutes);
-
+app.register(shiftRoutes);
 const start = async () => {
   try {
     await pool.query('SELECT NOW()');
