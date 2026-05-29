@@ -126,6 +126,14 @@ app.register(rateLimit, {
   timeWindow: '1 minute'
 });
 
+app.get('/version', async () => {
+  return {
+    branch: 'staging',
+    timestamp: new Date().toISOString(),
+    marker: 'ROS-STAGING-BUILD'
+  };
+});
+
 app.register(organizationRoutes);
 app.register(outletRoutes);
 app.register(userRoutes);
