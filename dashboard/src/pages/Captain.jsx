@@ -9,7 +9,7 @@ import useMenuStore from '../store/menuStore';
 import Button from '../components/ui/Button';
 
 // --- Memoised Compact Menu Tile (Horizontal) ---
-const MenuTile = React.memo(({ item, quantity, hasActiveShift, onAdd, onUpdate }) => {
+const MenuTile = React.memo(({ item, quantity, disabled, onAdd, onUpdate }) => {
   const price = parseFloat(item.base_price || 0);
   return (
     <div className="bg-white rounded-xl border border-gray-100 hover:shadow-sm transition-all duration-150 p-3 flex flex-col">
@@ -28,9 +28,9 @@ const MenuTile = React.memo(({ item, quantity, hasActiveShift, onAdd, onUpdate }
           {quantity === 0 ? (
             <button
               onClick={() => onAdd(item)}
-              disabled={!hasActiveShift}
+              disabled={disabled}
               className="px-3 py-2 text-sm font-medium rounded-lg flex items-center gap-1 min-h-[44px] transition active:scale-95 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!hasActiveShift ? 'Start shift to order' : ''}
+              title={disabled ? 'Start shift to order' : ''}
             >
               <Plus className="h-4 w-4" /> Add
             </button>
@@ -39,7 +39,7 @@ const MenuTile = React.memo(({ item, quantity, hasActiveShift, onAdd, onUpdate }
               <button
                 onClick={() => onUpdate(item.id, -1)}
                 className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-200 transition text-gray-700 font-bold"
-                disabled={!hasActiveShift}
+                disabled={disabled}
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -47,7 +47,7 @@ const MenuTile = React.memo(({ item, quantity, hasActiveShift, onAdd, onUpdate }
               <button
                 onClick={() => onUpdate(item.id, 1)}
                 className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-200 transition text-gray-700 font-bold"
-                disabled={!hasActiveShift}
+                disabled={disabled}
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -87,7 +87,7 @@ export default function Captain() {
   const [isDesktop, setIsDesktop] = useState(false);
   const searchInputRef = useRef(null);
 
-  // --- Order form state (for sidebar/drawer) ---
+  // --- Order form state ---
   const [tableNumber, setTableNumber] = useState('');
   const [tokenNumber, setTokenNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -96,16 +96,20 @@ export default function Captain() {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
 
-  // --- Discount
-  const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'fixed'
+  // --- Discount state ---
+  const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState(0);
   const [discountReason, setDiscountReason] = useState('');
 
-  // --- Tax rates (CGST 2.5%, SGST 2.5%, total 5%) ---
+  // --- Tax rates ---
   const cgstRate = 0.025;
   const sgstRate = 0.025;
 
-  // --- Detect desktop (≥1024px) for persistent sidebar ---
+  // --- Determine if user is a manager (no shift required) ---
+  const isManagerRole = ['OUTLET_MANAGER', 'ARM'].includes(outlet?.role);
+  const canAddToCart = isManagerRole ? true : hasActiveShift;
+
+  // --- Detect desktop ---
   useEffect(() => {
     const checkWidth = () => setIsDesktop(window.innerWidth >= 1024);
     checkWidth();
@@ -113,7 +117,7 @@ export default function Captain() {
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
-  // --- Fetch categories and all items once on mount ---
+  // --- Fetch categories & all items on mount ---
   useEffect(() => {
     if (!organizationId || !outletId) {
       setLoading(false);
@@ -137,15 +141,14 @@ export default function Captain() {
     load();
   }, [organizationId, outletId, fetchCategories, fetchAllItems, activeCategory]);
 
-  // --- Fetch items for selected category (if not already loaded by fetchAllItems) ---
+  // --- Fetch items for selected category if not already loaded ---
   useEffect(() => {
     if (!activeCategory || !organizationId || !outletId) return;
-    // If we already have items for this category (from fetchAllItems), skip.
     if (itemsByCategory[activeCategory]?.length > 0) return;
     fetchItems(organizationId, outletId, activeCategory, apiService);
   }, [activeCategory, organizationId, outletId, fetchItems, itemsByCategory]);
 
-  // --- Filter items for search (using preloaded allItems) ---
+  // --- Search filtering ---
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase();
@@ -156,7 +159,6 @@ export default function Captain() {
     );
   }, [allItems, searchTerm]);
 
-  // --- Items to display: search results or current category items ---
   const displayItems = searchTerm.trim() ? searchResults : (itemsByCategory[activeCategory] || []);
   const categoryLoading = searchTerm.trim() ? false : (loadingItems[activeCategory] || false);
   const isGlobalLoading = loadingAllItems && loading;
@@ -214,7 +216,6 @@ export default function Captain() {
     if (discountType === 'percentage') return (subtotal * discountValue) / 100;
     return Math.min(discountValue, subtotal);
   }, [discountType, discountValue, subtotal]);
-
   const cgstAmount = subtotal * cgstRate;
   const sgstAmount = subtotal * sgstRate;
   const grandTotal = subtotal - discountAmount + cgstAmount + sgstAmount;
@@ -273,9 +274,49 @@ export default function Captain() {
 
   if (!outlet) return <div className="flex items-center justify-center h-full text-red-500">No outlet assigned</div>;
   if (isGlobalLoading) return <div className="flex justify-center items-center h-full">Loading menu...</div>;
-  if (orderSuccess) return <div>Order placed! (Your success component)</div>;
+if (orderSuccess) {
+  const grandTotal = typeof orderSuccess.grand_total === 'number' 
+    ? orderSuccess.grand_total 
+    : parseFloat(orderSuccess.grand_total) || 0;
+  return (
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+      <div className="bg-green-50 rounded-full p-4 mb-4">
+        <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h2>
+      {orderSuccess.token_number && (
+        <p className="text-gray-600 mb-4">
+          Token: <span className="font-mono font-bold">{orderSuccess.token_number}</span>
+        </p>
+      )}
+      <p className="text-gray-600 mb-6">
+        Total: ₹{grandTotal.toFixed(2)}
+      </p>
+      <button
+        onClick={() => {
+          setOrderSuccess(null);
+          setCart([]);
+          setTableNumber('');
+          setTokenNumber('');
+          setCustomerName('');
+          setCustomerMobile('');
+          setOrderSource('DINE_IN');
+          setPaymentMethod('CASH');
+          setDiscountValue(0);
+          setDiscountReason('');
+          setShowCustomerDetails(false);
+        }}
+        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+      >
+        Place Another Order
+      </button>
+    </div>
+  );
+}
 
-  // Common cart panel (used as fixed sidebar on desktop, and as drawer on mobile)
+  // --- Cart panel component (reused for desktop sidebar & mobile drawer) ---
   const CartPanel = ({ isDrawer = false }) => (
     <div className={`bg-white flex flex-col h-full ${!isDrawer ? 'border-l border-gray-200' : ''}`}>
       <div className={`flex items-center justify-between border-b p-4 ${isDrawer ? '' : 'sticky top-0 bg-white z-10'}`}>
@@ -296,7 +337,6 @@ export default function Captain() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Order details */}
         <div className="space-y-3">
-          {/* Order Type – always visible */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
             <select
@@ -310,7 +350,6 @@ export default function Captain() {
             </select>
           </div>
 
-          {/* Payment Method – always visible */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
             <select
@@ -324,7 +363,6 @@ export default function Captain() {
             </select>
           </div>
 
-          {/* Expandable customer details */}
           <button
             onClick={() => setShowCustomerDetails(!showCustomerDetails)}
             className="text-indigo-600 text-sm font-medium flex items-center gap-1 mt-2 hover:text-indigo-700 transition"
@@ -379,6 +417,7 @@ export default function Captain() {
             </div>
           )}
         </div>
+
         {/* Cart items */}
         <div className="border-t pt-4">
           <h3 className="font-medium text-gray-800 mb-2">Items</h3>
@@ -491,7 +530,6 @@ export default function Captain() {
             </div>
           </div>
 
-          {/* Place order button */}
           <Button
             onClick={handlePlaceOrder}
             loading={placing}
@@ -570,7 +608,7 @@ export default function Captain() {
                   key={item.id}
                   item={item}
                   quantity={quantity}
-                  hasActiveShift={hasActiveShift}
+                  disabled={!canAddToCart}
                   onAdd={addToCart}
                   onUpdate={updateQuantity}
                 />
