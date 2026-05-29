@@ -1,3 +1,4 @@
+// dashboard/src/components/CartDrawer.jsx
 import React from 'react';
 import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import Button from './ui/Button';
@@ -7,7 +8,11 @@ export default function CartDrawer({
   onClose,
   cart,
   updateQuantity,
-  total,
+  total,           // grand total (for backward compatibility)
+  subtotal,
+  cgstAmount,
+  sgstAmount,
+  taxAmount,       // optional if you want combined tax
   onPlaceOrder,
   placing,
   // Order detail props
@@ -21,14 +26,14 @@ export default function CartDrawer({
   setCustomerName,
   customerMobile,
   setCustomerMobile,
-  // ✅ New: payment method
   paymentMethod,
   setPaymentMethod,
 }) {
   if (!isOpen) return null;
 
   const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  const safeTotal = typeof total === 'number' && !isNaN(total) ? total : 0;
+  // Use passed grand total or compute if not provided
+  const grandTotal = typeof total === 'number' && !isNaN(total) ? total : subtotal + (cgstAmount || 0) + (sgstAmount || 0);
 
   return (
     <>
@@ -43,7 +48,7 @@ export default function CartDrawer({
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-primary-600" />
+            <ShoppingBag className="h-5 w-5 text-indigo-600" />
             <h2 className="text-lg font-semibold text-gray-900">Your Order</h2>
             <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
               {cartCount} {cartCount === 1 ? 'item' : 'items'}
@@ -63,7 +68,7 @@ export default function CartDrawer({
               <select
                 value={orderSource}
                 onChange={(e) => setOrderSource(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               >
                 <option value="DINE_IN">Dine In</option>
                 <option value="TAKEAWAY">Takeaway</option>
@@ -79,7 +84,7 @@ export default function CartDrawer({
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                 />
               </div>
               <div>
@@ -89,7 +94,7 @@ export default function CartDrawer({
                   value={tokenNumber}
                   onChange={(e) => setTokenNumber(e.target.value)}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                 />
               </div>
             </div>
@@ -101,7 +106,7 @@ export default function CartDrawer({
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Optional"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
 
@@ -112,17 +117,16 @@ export default function CartDrawer({
                 value={customerMobile}
                 onChange={(e) => setCustomerMobile(e.target.value)}
                 placeholder="Optional"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               />
             </div>
 
-            {/* ✅ Payment Method Dropdown */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
               >
                 <option value="CASH">Cash</option>
                 <option value="UPI">UPI</option>
@@ -172,20 +176,48 @@ export default function CartDrawer({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer with Tax Breakdown */}
         {cart.length > 0 && (
           <div className="border-t p-4 space-y-3">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span>₹{safeTotal.toFixed(0)}</span>
-            </div>
+            {/* Only show detailed breakdown if tax props are provided */}
+            {(subtotal !== undefined || cgstAmount !== undefined) && (
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">₹{(subtotal || 0).toFixed(2)}</span>
+                </div>
+                {cgstAmount !== undefined && sgstAmount !== undefined && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">CGST (2.5%)</span>
+                      <span className="font-medium">₹{cgstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">SGST (2.5%)</span>
+                      <span className="font-medium">₹{sgstAmount.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between text-lg font-bold pt-1 border-t">
+                  <span>Total</span>
+                  <span>₹{grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            {/* Fallback if no tax props */}
+            {subtotal === undefined && (
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total</span>
+                <span>₹{grandTotal.toFixed(0)}</span>
+              </div>
+            )}
             <Button
               onClick={onPlaceOrder}
               loading={placing}
               disabled={placing}
               className="w-full py-3 text-lg"
             >
-              Place Order • ₹{safeTotal.toFixed(0)}
+              Place Order • ₹{grandTotal.toFixed(0)}
             </Button>
           </div>
         )}

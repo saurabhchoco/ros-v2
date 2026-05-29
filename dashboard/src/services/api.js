@@ -193,7 +193,7 @@ async listActiveUsers(outletId) {
   async getExpectedCash(shiftSessionId) {
     return axios.get(`${API_URL}/shift/expected-cash`, {
       params: { shiftSessionId },
-      headers: await this.getAuthHeaders()
+      headers: await getAuthHeaders()
     });
   },
 

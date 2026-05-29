@@ -21,7 +21,7 @@ async function orderRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
-        roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']),
+        roleMiddleware(['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM', 'CASHIER']),
         orderAccessMiddleware,
         activeShiftRequired
       ]

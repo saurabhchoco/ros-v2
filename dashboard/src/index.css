@@ -15,6 +15,13 @@ body,
   0%, 100% { background-color: white; border-color: #fecaca; }
   50% { background-color: #fee2e2; border-color: #ef4444; }
 }
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
 .animate-pulse-red {
   animation: pulse-red 0.8s ease-in-out infinite;
 }

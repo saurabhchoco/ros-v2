@@ -29,7 +29,7 @@ export default function RootLayout() {
     // Kitchen ONLY → KDS Board
     ...(role === 'KITCHEN' ? [{ path: '/kds', label: 'KDS Board' }] : []),
     // CASHIER only
-    ...(role === 'CASHIER' ? [{ path: '/orders', label: 'Orders' }] : []),
+    ...(role === 'CASHIER' ? [{ path: '/orders', label: 'Orders' }, { path: '/captain', label: 'Captain' }] : []),
     // GSA only
     ...(role === 'GSA' ? [{ path: '/orders', label: 'Orders' }, { path: '/captain', label: 'Captain' }] : []),
     // ARM (Assistant Restaurant Manager)
@@ -103,7 +103,7 @@ useEffect(() => {
               {outlet?.outletName || outlet?.name || 'My Outlet'}
             </span>
           )}
-          {!checkingShift && <StartShiftButton />}
+          {!checkingShift && <StartShiftButton initialActiveShift={activeShift} />}
           <button
             onClick={handleLogout}
             className="px-3 py-2 bg-white/10 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-all border border-white/20"

@@ -3,57 +3,46 @@ import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 
-export default function StartShiftButton() {
+export default function StartShiftButton({ initialActiveShift }) {
   const outlet = useAuthStore(s => s.outlet);
-  const [hasActiveShift, setHasActiveShift] = useState(false);
-  const [shiftStartTime, setShiftStartTime] = useState(null);
-  const [elapsed, setElapsed] = useState('00:00');
+  const [hasActiveShift, setHasActiveShift] = useState(!!initialActiveShift);
+  const [shiftStartTime, setShiftStartTime] = useState(
+    initialActiveShift?.started_at ? new Date(initialActiveShift.started_at) : null
+  );
+  const [elapsed, setElapsed] = useState('00:00:00');
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
 
   const shiftRoles = ['CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN'];
   const canStartShift = outlet && shiftRoles.includes(outlet.role);
 
+  // Update state when prop changes (e.g., after handover page reload)
   useEffect(() => {
-    if (!canStartShift || !outlet?.outletId) {
-      setChecking(false);
-      return;
+    if (initialActiveShift) {
+      setHasActiveShift(true);
+      setShiftStartTime(new Date(initialActiveShift.started_at));
+    } else {
+      setHasActiveShift(false);
+      setShiftStartTime(null);
+      setElapsed('00:00:00');
     }
-    const check = async () => {
-      try {
-        const res = await apiService.getActiveShift();
-        if (res.data.activeShift) {
-          setHasActiveShift(true);
-          setShiftStartTime(new Date(res.data.activeShift.started_at));
-        } else {
-          setHasActiveShift(false);
-          setShiftStartTime(null);
-        }
-      } catch (err) { console.error(err); }
-      finally { setChecking(false); }
+  }, [initialActiveShift]);
+
+  // Live timer (ticks every second)
+  useEffect(() => {
+    if (!hasActiveShift || !shiftStartTime) return;
+    const updateTimer = () => {
+      const now = new Date();
+      const diffMs = now - shiftStartTime;
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
     };
-    check();
-  }, [canStartShift, outlet]);
-
-useEffect(() => {
-  if (!hasActiveShift || !shiftStartTime) return;
-
-  const updateTimer = () => {
-    const now = new Date();
-    const diffMs = now - shiftStartTime;
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-  };
-
-  // Run immediately
-  updateTimer();
-
-  const interval = setInterval(updateTimer, 1000);
-  return () => clearInterval(interval);
-}, [hasActiveShift, shiftStartTime]);
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [hasActiveShift, shiftStartTime]);
 
   const handleStart = async () => {
     if (!outlet?.outletId) return;
@@ -82,7 +71,7 @@ useEffect(() => {
     } finally { setLoading(false); }
   };
 
-  if (!canStartShift || checking) return null;
+  if (!canStartShift) return null;
 
   if (hasActiveShift) {
     return (

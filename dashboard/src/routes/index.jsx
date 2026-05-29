@@ -73,7 +73,7 @@ export const router = createBrowserRouter([
       {
         path: 'captain',
         element: (
-          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']}>
+          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM', 'CASHIER']}>
             <Captain />
           </ProtectedRoute>
         )

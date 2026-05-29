@@ -47,10 +47,16 @@ export default function ShiftHandover() {
   const isCashier = selectedFromUser?.role_id === 'CASHIER';
 
   useEffect(() => {
+    console.log('isCashier:', isCashier);
+    console.log('selectedFromUser:', selectedFromUser);
+    console.log('shift_session_id:', selectedFromUser?.shift_session_id);
     if (isCashier && selectedFromUser?.shift_session_id) {
+      console.log('✅ About to call getExpectedCash for shift:', selectedFromUser.shift_session_id);
+      console.log('apiService.getExpectedCash function:', apiService.getExpectedCash);
       apiService.getExpectedCash(selectedFromUser.shift_session_id)
         .then(res => setExpectedCash(res.data.expected))
-        .catch(() => setExpectedCash(null));
+        .catch(err => console.error('Expected cash error:', err));
+        // .catch(() => setExpectedCash(null));
     } else {
       setExpectedCash(null);
     }
@@ -98,6 +104,8 @@ export default function ShiftHandover() {
       });
       console.log('Handover response:', response);
       setHandoverResult(response.data);
+      setShowForceModal(false);
+      setForceReason('');
       setShowSuccessModal(true);
     } catch (err) {
       if (err.response?.data?.requiresForce) {
