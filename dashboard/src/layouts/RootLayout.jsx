@@ -7,6 +7,19 @@ import StartShiftButton from '../components/StartShiftButton';
 import NotificationListener from '../components/NotificationListener';
 import { apiService } from '../services/api';
 
+import {
+  LayoutDashboard,
+  ClipboardList,
+  ChefHat,
+  BarChart3,
+  UserRound,
+  Store,
+  LogOut,
+  Settings
+} from 'lucide-react';
+
+import { AppShellNav } from '../components/ui/AppShellNav';
+
 export default function RootLayout() {
   const { user, outlet, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -25,37 +38,132 @@ export default function RootLayout() {
 
   const role = outlet?.role;
 
-  const navItems = [
-    // Kitchen ONLY → KDS Board
-    ...(role === 'KITCHEN' ? [{ path: '/kds', label: 'KDS Board' }] : []),
-    // CASHIER only
-    ...(role === 'CASHIER' ? [{ path: '/orders', label: 'Orders' }, { path: '/captain', label: 'Captain' }] : []),
-    // GSA only
-    ...(role === 'GSA' ? [{ path: '/orders', label: 'Orders' }, { path: '/captain', label: 'Captain' }] : []),
-    // ARM (Assistant Restaurant Manager)
-    ...(role === 'ARM' ? [
-      { path: '/kds', label: 'KDS Board' },
-      { path: '/orders', label: 'Orders' },
-      { path: '/reports', label: 'Reports' },
-      { path: '/captain', label: 'Captain' }
-    ] : []),
-    // Outlet Manager → KDS, Orders, Reports, Captain
-    ...(role === 'OUTLET_MANAGER' ? [
-      { path: '/kds', label: 'KDS Board' },
-      { path: '/orders', label: 'Orders' },
-      { path: '/reports', label: 'Reports' },
-      { path: '/captain', label: 'Captain' }
-    ] : []),
-    // Captain ONLY → Captain screen
-    ...(role === 'CAPTAIN' ? [{ path: '/captain', label: 'Captain' }] : []),
-    // Super Admin
-    ...(role === 'SUPER_ADMIN' ? [{ path: '/admin', label: '⚙️ Admin' }] : []),
-    // Brand Owner
-    ...(role === 'BRAND_OWNER' ? [
-      { path: '/owner', label: '🏪 My Outlets' },
-      { path: '/owner/analytics', label: '📊 Analytics' }
-    ] : [])
-  ];
+const navItems = [
+  ...(role === 'KITCHEN'
+    ? [
+        {
+          path: '/kds',
+          label: 'Kitchen',
+          icon: ChefHat
+        }
+      ]
+    : []),
+
+  ...(role === 'CASHIER'
+    ? [
+        {
+          path: '/orders',
+          label: 'Orders',
+          icon: ClipboardList
+        },
+        {
+          path: '/captain',
+          label: 'Captain',
+          icon: UserRound
+        }
+      ]
+    : []),
+
+  ...(role === 'GSA'
+    ? [
+        {
+          path: '/orders',
+          label: 'Orders',
+          icon: ClipboardList
+        },
+        {
+          path: '/captain',
+          label: 'Captain',
+          icon: UserRound
+        }
+      ]
+    : []),
+
+  ...(role === 'ARM'
+    ? [
+        {
+          path: '/kds',
+          label: 'Kitchen',
+          icon: ChefHat
+        },
+        {
+          path: '/orders',
+          label: 'Orders',
+          icon: ClipboardList
+        },
+        {
+          path: '/reports',
+          label: 'Reports',
+          icon: BarChart3
+        },
+        {
+          path: '/captain',
+          label: 'Captain',
+          icon: UserRound
+        }
+      ]
+    : []),
+
+  ...(role === 'OUTLET_MANAGER'
+    ? [
+        {
+          path: '/kds',
+          label: 'Kitchen',
+          icon: ChefHat
+        },
+        {
+          path: '/orders',
+          label: 'Orders',
+          icon: ClipboardList
+        },
+        {
+          path: '/reports',
+          label: 'Reports',
+          icon: BarChart3
+        },
+        {
+          path: '/captain',
+          label: 'Captain',
+          icon: UserRound
+        }
+      ]
+    : []),
+
+  ...(role === 'CAPTAIN'
+    ? [
+        {
+          path: '/captain',
+          label: 'Captain',
+          icon: UserRound
+        }
+      ]
+    : []),
+
+  ...(role === 'SUPER_ADMIN'
+    ? [
+        {
+          path: '/admin',
+          label: 'Admin',
+          icon: Settings
+        }
+      ]
+    : []),
+
+  ...(role === 'BRAND_OWNER'
+    ? [
+        {
+          path: '/owner',
+          label: 'Outlets',
+          icon: Store
+        },
+        {
+          path: '/owner/analytics',
+          label: 'Analytics',
+          icon: BarChart3
+        }
+      ]
+    : [])
+];
 
 useEffect(() => {
   const check = async () => {
@@ -74,56 +182,72 @@ useEffect(() => {
     (path === '/kds' && location.pathname === '/');
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className="flex flex-col h-screen bg-slate-50">
       {/* Top Navbar */}
-      <header className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-3 flex items-center justify-between shadow-lg flex-shrink-0">
-        <h1 className="text-white text-2xl font-bold tracking-tight">
-          R-OS
-        </h1>
+<header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
 
-        <div className="flex items-center gap-2">
-          {navItems.map(item => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                isActive(item.path)
-                  ? 'bg-white text-indigo-600 shadow'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+  {/* LEFT */}
 
-        <div className="flex items-center gap-3">
-          {outlet && (
-            <span className="text-white/80 text-sm hidden md:block">
-              {outlet?.outletName || outlet?.name || 'My Outlet'}
-            </span>
-          )}
-          {!checkingShift && <StartShiftButton initialActiveShift={activeShift} />}
-          <button
-            onClick={handleLogout}
-            className="px-3 py-2 bg-white/10 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-all border border-white/20"
-          >
-            Logout
-          </button>
+  <div className="flex items-center gap-10">
 
-          {/* Show banner only when shift has ended for eligible roles */}
-          {!checkingShift && !activeShift && outlet && shiftRoles.includes(outlet.role) && (
-            <div className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded text-sm font-medium">
-              You are not on shift. Please start your shift to take orders.
-            </div>
-          )}
-        </div>
-      </header>
+    <div>
+
+      <h1 className="text-xl font-bold text-slate-900">
+        R-OS
+      </h1>
+
+      <p className="text-xs text-slate-500">
+        Restaurant Operations Platform
+      </p>
+
+    </div>
+
+    <AppShellNav
+      items={navItems}
+      activePath={location.pathname}
+      onNavigate={navigate}
+    />
+
+  </div>
+
+  {/* RIGHT */}
+
+  <div className="flex items-center gap-4">
+
+    {outlet && (
+      <div className="hidden lg:flex flex-col bg-slate-100 rounded-xl px-4 py-2">
+
+        <span className="text-[11px] uppercase tracking-wide text-slate-500">
+          Outlet
+        </span>
+
+        <span className="font-semibold text-slate-900 text-sm">
+          {outlet?.outletName || outlet?.name || 'My Outlet'}
+        </span>
+
+      </div>
+    )}
+
+    {!checkingShift && (
+      <StartShiftButton initialActiveShift={activeShift} />
+    )}
+
+    <button
+      onClick={handleLogout}
+      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition"
+    >
+      <LogOut className="h-4 w-4" />
+      Logout
+    </button>
+
+  </div>
+
+</header>
 
       <NotificationListener />
 
       {/* Page Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto p-6">
         <Outlet />
       </main>
     </div>

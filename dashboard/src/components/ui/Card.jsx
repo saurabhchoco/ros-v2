@@ -1,8 +1,54 @@
-import React from 'react';
+import { cn } from "../../lib/utils";
 
-export default function Card({ children, className = '', padding = true }) {
+export function Card({
+  className,
+  children,
+  ...props
+}) {
   return (
-    <div className={`bg-white rounded-xl shadow-md border border-gray-100 ${padding ? 'p-4' : ''} ${className}`}>
+    <div
+      className={cn(
+        "rounded-2xl border border-slate-200 bg-white shadow-sm",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CardHeader({
+  className,
+  children,
+  ...props
+}) {
+  return (
+    <div
+      className={cn(
+        "p-6 pb-0",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CardContent({
+  className,
+  children,
+  ...props
+}) {
+  return (
+    <div
+      className={cn(
+        "p-6",
+        className
+      )}
+      {...props}
+    >
       {children}
     </div>
   );

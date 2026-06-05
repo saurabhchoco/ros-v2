@@ -7,17 +7,10 @@ const API_URL =
 
 const getAuthHeaders = async () => {
   const user = auth.currentUser;
-
-  if (!user) {
-    throw new Error('Not authenticated');
-  }
-
+  if (!user) throw new Error('Not authenticated');
   const token = await user.getIdToken(true);
-
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
+  return { 'Authorization': `Bearer ${token}` };
+  // No 'Content-Type' header – let Axios set it automatically
 };
 
 export const apiService = {
@@ -96,8 +89,9 @@ export const apiService = {
     );
   },
 
-  async getBrandAnalytics(period = 'day') {
-    return axios.get(`${API_URL}/brand/analytics?period=${period}`, {
+  async getBrandAnalytics(period = 'week') {
+    return axios.get(`${API_URL}/analytics/brand`, {
+      params: { period },
       headers: await getAuthHeaders()
     });
   },
@@ -183,12 +177,12 @@ export const apiService = {
     return axios.post(`${API_URL}/orders/${orderId}/settle`, { paymentMethod }, { headers: await getAuthHeaders() });
   },
 
-async listActiveUsers(outletId) {
-  return axios.get(`${API_URL}/shift/active-users`, {
-    params: { outletId },
-    headers: await getAuthHeaders()   // ✅ use the standalone function, not this.getAuthHeaders
-  });
-},
+  async listActiveUsers(outletId) {
+    return axios.get(`${API_URL}/shift/active-users`, {
+      params: { outletId },
+      headers: await getAuthHeaders()   // ✅ use the standalone function, not this.getAuthHeaders
+    });
+  },
 
   async getExpectedCash(shiftSessionId) {
     return axios.get(`${API_URL}/shift/expected-cash`, {
@@ -198,8 +192,9 @@ async listActiveUsers(outletId) {
   },
 
   async handoverShift(data) {
-    return axios.post(`${API_URL}/shift/handover`, data, { 
-      headers: await getAuthHeaders() });
+    return axios.post(`${API_URL}/shift/handover`, data, {
+      headers: await getAuthHeaders()
+    });
   },
 
   async startShift(data) {
@@ -233,6 +228,40 @@ async listActiveUsers(outletId) {
 
   async getOutletStaffKPIs(outletId) {
     return axios.get(`${API_URL}/users/outlet/${outletId}/staff/kpis`, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async menuImportDryRun(formData) {
+    return axios.post(`${API_URL}/menu/import/dry-run`, formData, {
+      headers: await getAuthHeaders()   // getAuthHeaders should NOT include 'Content-Type'
+    });
+  },
+
+  async menuImportConfirm(formData) {
+    return axios.post(`${API_URL}/menu/import/confirm`, formData, {
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async menuExport(outletId) {
+    return axios.get(`${API_URL}/menu/export`, {
+      params: { outletId },
+      responseType: 'blob',
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async menuSample() {
+    return axios.get(`${API_URL}/menu/import/sample`, {
+      responseType: 'blob',
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async getMenuHealth(outletId) {
+    return axios.get(`${API_URL}/menu/health`, {
+      params: { outletId },
       headers: await getAuthHeaders()
     });
   }

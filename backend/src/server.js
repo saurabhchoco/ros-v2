@@ -16,6 +16,9 @@ const organizationRoutes = require('./modules/organizations/organization.routes'
 const inventoryRoutes = require('./modules/inventory/inventory.routes');
 const shiftRoutes = require('./modules/shift/shift.routes');
 
+const analyticsRoutes = require('./routes/analytics.routes');
+
+
 const helmet =
   require('@fastify/helmet');
 
@@ -144,6 +147,8 @@ app.register(menuRoutes);
 app.register(adminRoutes);
 app.register(inventoryRoutes);
 app.register(shiftRoutes);
+app.register(analyticsRoutes);
+
 const start = async () => {
   try {
     await pool.query('SELECT NOW()');
