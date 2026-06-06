@@ -11,6 +11,8 @@ const fs =
 const csv =
   require('csv-parser');
 
+const crypto = require('crypto');
+
 async function createCategory(
   data
 ) {
@@ -216,10 +218,10 @@ async function importMenuCSV(
               }
 
               // Tenant-scoped category lookup
-                const categoryName = row.category_name ? row.category_name.trim() : '';
+              const categoryName = row.category_name ? row.category_name.trim() : '';
 
-                const categoryResult = await pool.query(
-                  `
+              const categoryResult = await pool.query(
+                `
                   SELECT id
                   FROM menu_categories
                   WHERE LOWER(name) = LOWER($1)
@@ -227,33 +229,33 @@ async function importMenuCSV(
                   AND outlet_id = $3
                   LIMIT 1
                   `,
-                  [categoryName, organizationId, outletId]
-                );
+                [categoryName, organizationId, outletId]
+              );
 
-                let categoryId;
+              let categoryId;
 
-                if (!categoryResult.rows[0]) {
+              if (!categoryResult.rows[0]) {
 
-                  const newCategory = await pool.query(
-                    `
+                const newCategory = await pool.query(
+                  `
                     INSERT INTO menu_categories (
                       id, organization_id, outlet_id, name, created_at, updated_at
                     )
                     VALUES ($1,$2,$3,$4,NOW(),NOW())
                     RETURNING id
                     `,
-                    [generateId('cat'), organizationId, outletId, categoryName]
-                  );
+                  [generateId('cat'), organizationId, outletId, categoryName]
+                );
 
-                  categoryId =
-                    newCategory.rows[0].id;
+                categoryId =
+                  newCategory.rows[0].id;
 
-                } else {
+              } else {
 
-                  categoryId =
-                    categoryResult.rows[0].id;
+                categoryId =
+                  categoryResult.rows[0].id;
 
-                }
+              }
 
               // const categoryId =
               //   categoryResult.rows[0].id;
@@ -313,28 +315,21 @@ async function importMenuCSV(
 }
 
 async function updateMenuItem(id, updates, userContext) {
-  const { name, basePrice, description, isVeg, taxPercentage, isAvailable } = updates;
-  // Ensure item belongs to same organization
-  const check = await pool.query(
-    `SELECT id FROM menu_items WHERE id = $1 AND organization_id = $2`,
-    [id, userContext.organization_id]
-  );
-  if (check.rows.length === 0) {
-    throw new Error('Item not found or unauthorized');
-  }
-  const result = await pool.query(
-    `UPDATE menu_items
-     SET name = COALESCE($1, name),
-         base_price = COALESCE($2, base_price),
-         description = COALESCE($3, description),
-         is_veg = COALESCE($4, is_veg),
-         tax_percentage = COALESCE($5, tax_percentage),
-         is_available = COALESCE($6, is_available),
-         updated_at = NOW()
-     WHERE id = $7
-     RETURNING *`,
-    [name, basePrice, description, isVeg, taxPercentage, isAvailable, id]
-  );
+  const { name, basePrice, description, isVeg, taxPercentage, isAvailable, status } = updates;
+  const result = await pool.query(`
+    UPDATE menu_items 
+    SET name = COALESCE($1, name),
+        base_price = COALESCE($2, base_price),
+        description = COALESCE($3, description),
+        is_veg = COALESCE($4, is_veg),
+        tax_percentage = COALESCE($5, tax_percentage),
+        is_available = COALESCE($6, is_available),
+        status = COALESCE($7, status),
+        updated_at = NOW()
+    WHERE id = $8
+    RETURNING *
+  `, [name, basePrice, description, isVeg, taxPercentage, isAvailable, status, id]);
+  if (!result.rows.length) throw new Error('Item not found');
   return result.rows[0];
 }
 
@@ -358,9 +353,269 @@ async function createCombo(data) {
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'COMBO', $10)
     RETURNING *`,
     [id, data.organizationId, data.outletId, data.categoryId, data.name,
-     data.basePrice, 0, true, true, JSON.stringify(data.components)]
+      data.basePrice, 0, true, true, JSON.stringify(data.components)]
   );
   return result.rows[0];
+}
+
+/**
+ * Get item counts per category for a given outlet
+ * @param {string} outletId
+ * @returns {Promise<Object>} object mapping category_id -> count
+ */
+async function getCategoryItemCounts(outletId) {
+  const result = await pool.query(
+    `SELECT category_id, COUNT(*) as count
+     FROM menu_items
+     WHERE outlet_id = $1
+     GROUP BY category_id`,
+    [outletId]
+  );
+  const counts = {};
+  result.rows.forEach(row => {
+    counts[row.category_id] = parseInt(row.count);
+  });
+  return counts;
+}
+
+async function batchUpdateItems(itemIds, action, userContext) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let updated = 0;
+    for (const id of itemIds) {
+      if (action.type === 'price') {
+        const { rows } = await client.query('SELECT base_price FROM menu_items WHERE id = $1', [id]);
+        if (!rows.length) continue;
+        let newPrice = parseFloat(rows[0].base_price);
+        if (action.isPercent) {
+          newPrice = newPrice * (1 + action.value / 100);
+        } else {
+          newPrice += action.value;
+        }
+        newPrice = Math.max(0, newPrice);
+        await client.query('UPDATE menu_items SET base_price = $1 WHERE id = $2', [newPrice, id]);
+        updated++;
+      } else if (action.type === 'status') {
+        const validStatus = ['active', 'draft', 'out_of_stock', 'hidden'];
+        if (!validStatus.includes(action.value)) throw new Error('Invalid status');
+        await client.query('UPDATE menu_items SET status = $1 WHERE id = $2', [action.value, id]);
+        updated++;
+      } else if (action.type === 'category') {
+        await client.query('UPDATE menu_items SET category_id = $1 WHERE id = $2', [action.value, id]);
+        updated++;
+      }
+    }
+    await client.query('COMMIT');
+    return { updated };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function duplicateMenuItem(id, userContext) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Fetch original item
+    const itemRes = await client.query('SELECT * FROM menu_items WHERE id = $1', [id]);
+    if (!itemRes.rows.length) throw new Error('Item not found');
+    const original = itemRes.rows[0];
+
+    // Generate new unique ID
+    const newId = generateMenuItemId();
+
+    // Generate new item_code if it exists
+    let newItemCode = original.item_code ? `${original.item_code}_copy` : null;
+
+    // Insert with explicitly generated ID
+    const insertRes = await client.query(`
+      INSERT INTO menu_items (
+        id, name, description, base_price, is_veg, tax_percentage, status,
+        item_type, organization_id, outlet_id, category_id, item_code, is_available
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      newId,
+      `${original.name} (Copy)`,
+      original.description,
+      original.base_price,
+      original.is_veg,
+      original.tax_percentage,
+      original.status,
+      original.item_type,
+      original.organization_id,
+      original.outlet_id,
+      original.category_id,
+      newItemCode,
+      original.is_available
+    ]);
+
+    // (Optional) Copy variants if the table exists – skip for now to keep simple
+    // You can add later
+
+    await client.query('COMMIT');
+    return insertRes.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+function generateMenuItemId() {
+  // Generate a random 10-character string (e.g., 'itm_a1b2c3d4e5')
+  const random = crypto.randomBytes(5).toString('hex'); // 10 hex chars
+  return `itm_${random}`;
+}
+
+
+
+// Helper to get or create a category by name (reused from import)
+async function getOrCreateCategory(categoryName, outletId, organizationId, client) {
+  if (!categoryName) return null;
+  let res = await client.query(
+    `SELECT id FROM menu_categories WHERE name = $1 AND outlet_id = $2 AND organization_id = $3`,
+    [categoryName, outletId, organizationId]
+  );
+  if (res.rows.length > 0) return res.rows[0].id;
+  const newId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+  const orderRes = await client.query(
+    `SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM menu_categories WHERE outlet_id = $1`,
+    [outletId]
+  );
+  await client.query(
+    `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [newId, categoryName, outletId, organizationId, orderRes.rows[0].next_order]
+  );
+  return newId;
+}
+
+async function copyMenuToOutlet(sourceOutletId, targetOutletId, userContext) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Clear existing menu in target outlet
+    await client.query('DELETE FROM menu_items WHERE outlet_id = $1', [targetOutletId]);
+    await client.query('DELETE FROM menu_categories WHERE outlet_id = $1', [targetOutletId]);
+
+    // 2. Copy all categories from source to target (by name, generate new IDs)
+    const sourceCategories = await client.query(
+      'SELECT name, display_order FROM menu_categories WHERE outlet_id = $1',
+      [sourceOutletId]
+    );
+    const categoryNameToId = {};
+    for (const cat of sourceCategories.rows) {
+      const newId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+      await client.query(
+        `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [newId, cat.name, targetOutletId, userContext.organization_id, cat.display_order]
+      );
+      categoryNameToId[cat.name] = newId;
+    }
+    console.log(`Copied ${sourceCategories.rows.length} categories.`);
+
+    // Ensure "Uncategorized" exists in target (will be used for orphaned items)
+    if (!categoryNameToId['Uncategorized']) {
+      const uncatId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+      const maxOrder = await client.query(
+        `SELECT COALESCE(MAX(display_order), 0) + 1 as next FROM menu_categories WHERE outlet_id = $1`,
+        [targetOutletId]
+      );
+      await client.query(
+        `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [uncatId, 'Uncategorized', targetOutletId, userContext.organization_id, maxOrder.rows[0].next]
+      );
+      categoryNameToId['Uncategorized'] = uncatId;
+      console.log('Added "Uncategorized" category to target.');
+    }
+
+    // 3. Copy all items from source to target
+    // We need source item ID for variants, so SELECT mi.id as well
+    const sourceItems = await client.query(
+      `SELECT mi.id, mi.name, mi.description, mi.base_price, mi.is_veg, mi.tax_percentage,
+              mi.status, mi.item_type, mi.item_code, mi.is_available, mc.name as category_name
+       FROM menu_items mi
+       LEFT JOIN menu_categories mc ON mi.category_id = mc.id AND mc.outlet_id = $1
+       WHERE mi.outlet_id = $1`,
+      [sourceOutletId]
+    );
+    let inserted = 0;
+    for (const item of sourceItems.rows) {
+      let categoryName = item.category_name;
+      if (!categoryName) {
+        console.log(`Item "${item.name}" has no category → using "Uncategorized"`);
+        categoryName = 'Uncategorized';
+      }
+      let targetCategoryId = categoryNameToId[categoryName];
+      if (!targetCategoryId) {
+        // Create missing category in target (should not happen, but safe)
+        const newId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+        const maxOrder = await client.query(
+          `SELECT COALESCE(MAX(display_order), 0) + 1 as next FROM menu_categories WHERE outlet_id = $1`,
+          [targetOutletId]
+        );
+        await client.query(
+          `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [newId, categoryName, targetOutletId, userContext.organization_id, maxOrder.rows[0].next]
+        );
+        targetCategoryId = newId;
+        categoryNameToId[categoryName] = targetCategoryId;
+        console.log(`Created missing category "${categoryName}" in target.`);
+      }
+      const newItemId = `itm_${crypto.randomBytes(5).toString('hex')}`;
+      await client.query(
+        `INSERT INTO menu_items (
+          id, name, description, base_price, is_veg, tax_percentage, status,
+          item_type, organization_id, outlet_id, category_id, item_code, is_available
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [
+          newItemId, item.name, item.description, item.base_price, item.is_veg,
+          item.tax_percentage, item.status, item.item_type,
+          userContext.organization_id, targetOutletId, targetCategoryId,
+          item.item_code, item.is_available
+        ]
+      );
+      inserted++;
+
+      // 4. Copy variants (if any) – using original source item.id
+      try {
+        const variants = await client.query(
+          'SELECT name, price, is_default FROM menu_item_variants WHERE menu_item_id = $1',
+          [item.id]
+        );
+        for (const variant of variants.rows) {
+          await client.query(
+            `INSERT INTO menu_item_variants (menu_item_id, name, price, is_default)
+             VALUES ($1, $2, $3, $4)`,
+            [newItemId, variant.name, variant.price, variant.is_default]
+          );
+        }
+      } catch (err) {
+        // variants table might not exist – log and continue
+        if (err.code !== '42P01') console.warn('Variants copy error:', err.message);
+      }
+    }
+    console.log(`Copied ${inserted} out of ${sourceItems.rows.length} items.`);
+
+    await client.query('COMMIT');
+    return { success: true, message: `Copied ${sourceCategories.rows.length} categories, ${inserted} items` };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Copy menu error:', err);
+    throw new Error(`Copy failed: ${err.message}`);
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = {
@@ -371,5 +626,10 @@ module.exports = {
   importMenuCSV,
   updateMenuItem,
   deleteMenuItem,
-  createCombo
+  createCombo,
+  getCategoryItemCounts,
+  batchUpdateItems,
+  duplicateMenuItem,
+  getOrCreateCategory,
+  copyMenuToOutlet
 };

@@ -127,6 +127,10 @@ async function userRoutes(app) {
     `, [outletId]);
     return reply.send({ success: true, data: result.rows[0] });
   });
+
+  app.get('/api/v1/organization/outlets', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, userController.listOrganizationOutlets);
 }
 
 module.exports = userRoutes;

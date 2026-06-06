@@ -45,10 +45,7 @@ async function createCategory(
 }
 
 async function listCategories(request, reply) {
-
-  const { organizationId, outletId } =
-    request.query;
-
+  const { organizationId, outletId, includeCounts } = request.query;
   if (!organizationId || !outletId) {
     return reply.status(400).send({
       success: false,
@@ -56,16 +53,21 @@ async function listCategories(request, reply) {
     });
   }
 
-  const categories =
-    await menuService.listCategories(
-      organizationId,
-      outletId
-    );
+  // Get base categories
+  const categories = await menuService.listCategories(organizationId, outletId);
 
-  return reply.send({
-    success: true,
-    data: categories
-  });
+  // If counts requested, attach item_count to each category
+  if (includeCounts === 'true') {
+    // Fetch counts from menuService (we'll add this method)
+    const counts = await menuService.getCategoryItemCounts(outletId);
+    const categoriesWithCounts = categories.map(cat => ({
+      ...cat,
+      item_count: counts[cat.id] || 0
+    }));
+    return reply.send({ success: true, data: categoriesWithCounts });
+  }
+
+  return reply.send({ success: true, data: categories });
 }
 
 async function createMenuItem(
@@ -100,24 +102,20 @@ async function createMenuItem(
 }
 
 async function listMenuItems(request, reply) {
-
-  const { organizationId, outletId, categoryId } =
-    request.query;
-
+  const { organizationId, outletId, categoryId } = request.query;
   if (!organizationId || !outletId) {
     return reply.status(400).send({
       success: false,
       message: 'organizationId and outletId are required'
     });
   }
-
-  const items =
-    await menuService.listMenuItems(
-      organizationId,
-      outletId,
-      categoryId || null
-    );
-
+  // Treat 'all' as no category filter
+  const effectiveCategoryId = (categoryId === 'all') ? null : categoryId || null;
+  const items = await menuService.listMenuItems(
+    organizationId,
+    outletId,
+    effectiveCategoryId
+  );
   return reply.send({
     success: true,
     data: items
@@ -262,10 +260,10 @@ async function importCSV(
 
 async function updateMenuItem(request, reply) {
   const { id } = request.params;
-  const { name, basePrice, description, isVeg, taxPercentage, isAvailable } = request.body;
+  const { name, basePrice, description, isVeg, taxPercentage, isAvailable, status } = request.body;
   try {
     const item = await menuService.updateMenuItem(id, {
-      name, basePrice, description, isVeg, taxPercentage, isAvailable
+      name, basePrice, description, isVeg, taxPercentage, isAvailable, status
     }, request.userContext);
     return reply.send({ success: true, data: item });
   } catch (err) {
@@ -310,6 +308,45 @@ async function listPublicMenuItems(request, reply) {
   return reply.send({ success: true, data: items });
 }
 
+async function batchUpdate(request, reply) {
+  const { itemIds, action } = request.body;
+  if (!itemIds || !itemIds.length) return reply.code(400).send({ error: 'No items selected' });
+  const result = await menuService.batchUpdate(itemIds, action, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
+async function batchUpdate(request, reply) {
+  const { itemIds, action } = request.body;
+  if (!itemIds || !itemIds.length) {
+    return reply.code(400).send({ error: 'No items selected' });
+  }
+  if (!action || !action.type) {
+    return reply.code(400).send({ error: 'Action type required' });
+  }
+  const result = await menuService.batchUpdateItems(itemIds, action, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
+async function duplicateItem(request, reply) {
+  const { id } = request.params;
+  try {
+    const newItem = await menuService.duplicateMenuItem(id, request.userContext);
+    return reply.send({ success: true, data: newItem });
+  } catch (err) {
+    request.log.error(err);     // ✅ use 'request' not 'req'
+    return reply.code(500).send({ success: false, message: err.message });
+  }
+}
+
+async function copyMenuToOutlet(request, reply) {
+  const { sourceOutletId, targetOutletId } = request.body;
+  if (!sourceOutletId || !targetOutletId) {
+    return reply.code(400).send({ error: 'sourceOutletId and targetOutletId required' });
+  }
+  const result = await menuService.copyMenuToOutlet(sourceOutletId, targetOutletId, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
 module.exports = {
   createCategory,
   listCategories,
@@ -320,5 +357,8 @@ module.exports = {
   deleteMenuItem,
   createCombo,
   listPublicCategories,
-  listPublicMenuItems
+  listPublicMenuItems,
+  batchUpdate,
+  duplicateItem,
+  copyMenuToOutlet
 };

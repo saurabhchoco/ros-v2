@@ -4,6 +4,7 @@ const {
 } = require('./user.schema');
 
 const userService = require('./user.service');
+const pool = require('../../config/db');
 
 async function createUser(request, reply) {
 
@@ -73,8 +74,27 @@ async function getMe(request, reply) {
   });
 }
 
+async function listOrganizationOutlets(request, reply) {
+  const { organization_id } = request.userContext;
+  try {
+    // Remove 'address' and select only columns that exist
+    const result = await pool.query(
+      `SELECT id, name, status 
+       FROM outlets 
+       WHERE organization_id = $1 
+       ORDER BY name`,
+      [organization_id]
+    );
+    return reply.send({ success: true, data: result.rows });
+  } catch (err) {
+    request.log.error(err);
+    return reply.code(500).send({ error: 'Failed to fetch outlets' });
+  }
+}
+
 module.exports = {
   createUser,
   listUsers,
-  getMe
+  getMe,
+  listOrganizationOutlets
 };

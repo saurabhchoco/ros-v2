@@ -73,20 +73,16 @@ export const apiService = {
     );
   },
 
-  async getCategories(organizationId, outletId) {
-    return axios.get(
-      `${API_URL}/menu/categories/list?organizationId=${organizationId}&outletId=${outletId}`,
-      { headers: await getAuthHeaders() }
-    );
+  async getCategories(organizationId, outletId, includeCounts = false) {
+    let url = `${API_URL}/menu/categories/list?organizationId=${organizationId}&outletId=${outletId}`;
+    if (includeCounts) url += `&includeCounts=true`;
+    return axios.get(url, { headers: await getAuthHeaders() });
   },
 
   async getMenuItems(organizationId, outletId, categoryId = null) {
     let url = `${API_URL}/menu/items/list?organizationId=${organizationId}&outletId=${outletId}`;
     if (categoryId) url += `&categoryId=${categoryId}`;
-    return axios.get(
-      url,
-      { headers: await getAuthHeaders() }
-    );
+    return axios.get(url, { headers: await getAuthHeaders() });
   },
 
   async getBrandAnalytics(period = 'week') {
@@ -264,5 +260,29 @@ export const apiService = {
       params: { outletId },
       headers: await getAuthHeaders()
     });
-  }
+  },
+
+  batchUpdateMenuItems: async (itemIds, action) => {
+    return axios.patch(`${API_URL}/menu/batch`, { itemIds, action }, { headers: await getAuthHeaders() });
+  },
+
+  duplicateMenuItem: async (itemId) => {
+    return axios.post(`${API_URL}/menu/items/${itemId}/duplicate`, {}, { headers: await getAuthHeaders() });
+  },
+
+  createMenuItem: async (data) => {
+    return axios.post(`${API_URL}/menu/items/create`, data, { headers: await getAuthHeaders() });
+  },
+  createCategory: async (data) => {
+    return axios.post(`${API_URL}/menu/categories/create`, data, { headers: await getAuthHeaders() });
+  },
+
+  copyMenuToOutlet: async (sourceOutletId, targetOutletId) => {
+    return axios.post(`${API_URL}/menu/copy-to-outlet`, { sourceOutletId, targetOutletId }, { headers: await getAuthHeaders() });
+  },
+
+  async getOrganizationOutlets() {
+    return axios.get(`${API_URL}/organization/outlets`, { headers: await getAuthHeaders() });
+  },
+
 };

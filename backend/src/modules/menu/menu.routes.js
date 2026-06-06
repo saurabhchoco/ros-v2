@@ -197,6 +197,20 @@ async function menuRoutes(app) {
     }
   });
 
+  // In menu.route.js
+  app.patch('/api/v1/menu/batch', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.batchUpdate);
+
+  // Duplicate item
+  app.post('/api/v1/menu/items/:id/duplicate', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.duplicateItem);
+
+  app.post('/api/v1/menu/copy-to-outlet', {
+  preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+}, menuController.copyMenuToOutlet);
+
   // Public endpoints (no auth)
   app.get('/api/v1/public/categories', menuController.listPublicCategories);
   app.get('/api/v1/public/items', menuController.listPublicMenuItems);
