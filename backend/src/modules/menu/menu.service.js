@@ -618,6 +618,76 @@ async function copyMenuToOutlet(sourceOutletId, targetOutletId, userContext) {
   }
 }
 
+async function updateCategory(id, newName, userContext) {
+  const result = await pool.query(
+    `UPDATE menu_categories SET name = $1, updated_at = NOW()
+     WHERE id = $2 AND organization_id = $3
+     RETURNING *`,
+    [newName, id, userContext.organization_id]
+  );
+  if (result.rows.length === 0) throw new Error('Category not found');
+  return result.rows[0];
+}
+
+async function deleteCategory(id, moveToCategoryId, userContext) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Check if category has items
+    const itemsCount = await client.query(
+      `SELECT COUNT(*) FROM menu_items WHERE category_id = $1 AND outlet_id IN
+       (SELECT id FROM outlets WHERE organization_id = $2)`,
+      [id, userContext.organization_id]
+    );
+    if (parseInt(itemsCount.rows[0].count) > 0 && !moveToCategoryId) {
+      throw new Error('Cannot delete category with items. Move items first.');
+    }
+    if (moveToCategoryId) {
+      // Move items to target category
+      await client.query(
+        `UPDATE menu_items SET category_id = $1 WHERE category_id = $2`,
+        [moveToCategoryId, id]
+      );
+    }
+    // Delete category
+    await client.query(
+      `DELETE FROM menu_categories WHERE id = $1 AND organization_id = $2`,
+      [id, userContext.organization_id]
+    );
+    await client.query('COMMIT');
+    return { success: true, message: 'Category deleted' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function mergeCategories(sourceId, targetId, userContext) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Move all items from source to target
+    await client.query(
+      `UPDATE menu_items SET category_id = $1 WHERE category_id = $2`,
+      [targetId, sourceId]
+    );
+    // Delete source category
+    await client.query(
+      `DELETE FROM menu_categories WHERE id = $1 AND organization_id = $2`,
+      [sourceId, userContext.organization_id]
+    );
+    await client.query('COMMIT');
+    return { success: true, message: 'Categories merged' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createCategory,
   listCategories,
@@ -631,5 +701,8 @@ module.exports = {
   batchUpdateItems,
   duplicateMenuItem,
   getOrCreateCategory,
-  copyMenuToOutlet
+  copyMenuToOutlet,
+  mergeCategories,
+  deleteCategory,
+  updateCategory
 };

@@ -285,4 +285,19 @@ export const apiService = {
     return axios.get(`${API_URL}/organization/outlets`, { headers: await getAuthHeaders() });
   },
 
+  updateCategory: async (categoryId, name) => {
+    return axios.put(`${API_URL}/menu/categories/${categoryId}`, { name }, { headers: await getAuthHeaders() });
+  },
+  
+  deleteCategory: async (categoryId, moveToCategoryId) => {
+    return axios.delete(`${API_URL}/menu/categories/${categoryId}`, {
+      data: { moveToCategoryId },
+      headers: await getAuthHeaders()
+    });
+  },
+
+  mergeCategories: async (sourceId, targetId) => {
+    return axios.post(`${API_URL}/menu/categories/merge`, { sourceCategoryId: sourceId, targetCategoryId: targetId }, { headers: await getAuthHeaders() });
+  },
+
 };

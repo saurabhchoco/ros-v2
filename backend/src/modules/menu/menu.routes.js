@@ -208,8 +208,23 @@ async function menuRoutes(app) {
   }, menuController.duplicateItem);
 
   app.post('/api/v1/menu/copy-to-outlet', {
-  preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
-}, menuController.copyMenuToOutlet);
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.copyMenuToOutlet);
+
+  // Rename category
+  app.put('/api/v1/menu/categories/:id', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.updateCategory);
+
+  // Delete category (with optional move to another category)
+  app.delete('/api/v1/menu/categories/:id', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.deleteCategory);
+
+  // Merge categories
+  app.post('/api/v1/menu/categories/merge', {
+    preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['BRAND_OWNER', 'OUTLET_MANAGER'])]
+  }, menuController.mergeCategories);
 
   // Public endpoints (no auth)
   app.get('/api/v1/public/categories', menuController.listPublicCategories);

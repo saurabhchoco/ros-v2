@@ -347,6 +347,30 @@ async function copyMenuToOutlet(request, reply) {
   return reply.send({ success: true, data: result });
 }
 
+async function updateCategory(request, reply) {
+  const { id } = request.params;
+  const { name } = request.body;
+  if (!name) return reply.code(400).send({ error: 'Name required' });
+  const result = await menuService.updateCategory(id, name, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
+async function deleteCategory(request, reply) {
+  const { id } = request.params;
+  const { moveToCategoryId } = request.body;
+  const result = await menuService.deleteCategory(id, moveToCategoryId, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
+async function mergeCategories(request, reply) {
+  const { sourceCategoryId, targetCategoryId } = request.body;
+  if (!sourceCategoryId || !targetCategoryId) {
+    return reply.code(400).send({ error: 'sourceCategoryId and targetCategoryId required' });
+  }
+  const result = await menuService.mergeCategories(sourceCategoryId, targetCategoryId, request.userContext);
+  return reply.send({ success: true, data: result });
+}
+
 module.exports = {
   createCategory,
   listCategories,
@@ -360,5 +384,8 @@ module.exports = {
   listPublicMenuItems,
   batchUpdate,
   duplicateItem,
-  copyMenuToOutlet
+  copyMenuToOutlet,
+  updateCategory,
+  deleteCategory,
+  mergeCategories
 };

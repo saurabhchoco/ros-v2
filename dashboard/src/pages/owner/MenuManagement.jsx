@@ -507,6 +507,21 @@ export default function MenuManagement() {
   const [selectedTargetOutletId, setSelectedTargetOutletId] = useState('');
   const [outlets, setOutlets] = useState([]); // fetch outlets for the organization
 
+  const [showManageCategoriesModal, setShowManageCategoriesModal] = useState(false);
+  const [selectedCategoryForActions, setSelectedCategoryForActions] = useState(null);
+  const [renamingLoading, setRenamingLoading] = useState(false);
+  const [deletingLoading, setDeletingLoading] = useState(false);
+  const [mergingLoading, setMergingLoading] = useState(false);
+
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renamingCategory, setRenamingCategory] = useState(null);
+  const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState(null);
+  const [moveToCategoryId, setMoveToCategoryId] = useState('');
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeSource, setMergeSource] = useState(null);
+  const [mergeTarget, setMergeTarget] = useState('');
+
   // Load categories & items (same as before)
   useEffect(() => {
     if (!organizationId || !targetOutletId) {
@@ -578,6 +593,65 @@ export default function MenuManagement() {
   const clearSelection = () => setSelectedItemIds(new Set());
 
   // Batch handlers (unchanged)
+
+const handleRenameCategory = async () => {
+  if (!newCategoryName.trim()) return;
+  setRenamingLoading(true);
+  try {
+    await apiService.updateCategory(renamingCategory.id, newCategoryName);
+    toast.success('Category renamed');
+    setShowRenameModal(false);
+    setRenamingCategory(null);
+    setNewCategoryName('');
+    await refreshCategories();
+  } catch (err) {
+    toast.error('Rename failed');
+  } finally {
+    setRenamingLoading(false);
+  }
+};
+
+const handleDeleteCategory = async () => {
+  if (!deletingCategory) return;
+  setDeletingLoading(true);
+  try {
+    await apiService.deleteCategory(deletingCategory.id, moveToCategoryId || null);
+    toast.success('Category deleted');
+    setShowDeleteCategoryModal(false);
+    setDeletingCategory(null);
+    setMoveToCategoryId('');
+    await refreshCategories();
+    if (activeCategory === deletingCategory.id) setActiveCategory(null);
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Delete failed');
+  } finally {
+    setDeletingLoading(false);
+  }
+};
+
+const handleMergeCategories = async () => {
+  if (!mergeSource || !mergeTarget) return;
+  setMergingLoading(true);
+  try {
+    await apiService.mergeCategories(mergeSource.id, mergeTarget);
+    toast.success('Categories merged');
+    setShowMergeModal(false);
+    setMergeSource(null);
+    setMergeTarget('');
+    await refreshCategories();
+    if (activeCategory === mergeSource.id) setActiveCategory(null);
+  } catch (err) {
+    toast.error('Merge failed');
+  } finally {
+    setMergingLoading(false);
+  }
+};
+
+  const refreshCategories = async () => {
+    const res = await apiService.getCategories(organizationId, targetOutletId, true);
+    setCategories(res.data.data || []);
+  };
+
   const handleBatchPriceUpdate = () => {
     if (selectedItemIds.size === 0) return;
     setShowBatchPriceModal(true);
@@ -997,12 +1071,21 @@ export default function MenuManagement() {
       <div className="flex-1 min-h-0 flex flex-row gap-6 px-6 pb-20 overflow-hidden">
         {/* Left Sidebar – Categories (fixed, internal scroll if needed) */}
         <div className="w-64 flex-shrink-0 bg-white rounded-xl border p-3 h-fit max-h-full overflow-y-auto">
-          <div className="font-semibold text-gray-700 mb-2 px-2">Categories</div>
+          <div className="flex justify-between items-center mb-2 px-2">
+            <div className="font-semibold text-gray-700">Categories</div>
+            <button
+              onClick={() => setShowManageCategoriesModal(true)}
+              className="text-xs text-indigo-600 hover:text-indigo-800"
+            >
+              Manage
+            </button>
+          </div>
           <div className="space-y-1">
             <button
               onClick={() => setActiveCategory(null)}
               disabled={globalLoading}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${activeCategory === null ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'} disabled:opacity-50`}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${activeCategory === null ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'
+                } disabled:opacity-50`}
             >
               All Items
             </button>
@@ -1011,7 +1094,8 @@ export default function MenuManagement() {
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
                 disabled={globalLoading}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition flex justify-between ${activeCategory === cat.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'} disabled:opacity-50`}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition flex justify-between items-center ${activeCategory === cat.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'
+                  } disabled:opacity-50`}
               >
                 <span>{cat.name}</span>
                 <span className="text-gray-400 text-xs">{cat.item_count ?? 0}</span>
@@ -1373,6 +1457,213 @@ export default function MenuManagement() {
               >
                 {globalLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
                 {globalLoading ? 'Copying menu...' : 'Copy Menu'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+{showRenameModal && renamingCategory && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 className="text-xl font-bold mb-4">Rename Category</h3>
+      <input
+        type="text"
+        value={newCategoryName}
+        onChange={(e) => setNewCategoryName(e.target.value)}
+        className="w-full border rounded-lg px-3 py-2 mb-4"
+        autoFocus
+        disabled={renamingLoading}
+      />
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setShowRenameModal(false)} disabled={renamingLoading} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+        <button onClick={handleRenameCategory} disabled={renamingLoading} className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-2">
+          {renamingLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {showDeleteCategoryModal && deletingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Delete Category</h3>
+            <p className="text-gray-600 mb-4">
+              Category "{deletingCategory.name}" has {deletingCategory.item_count || 0} item(s).
+            </p>
+            {deletingCategory.item_count > 0 ? (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Move items to:</label>
+                <select
+                  value={moveToCategoryId}
+                  onChange={(e) => setMoveToCategoryId(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">Select category</option>
+                  {categories.filter(c => c.id !== deletingCategory.id).map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-gray-500 mb-4">This category has no items. It can be deleted safely.</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowDeleteCategoryModal(false)} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button
+                onClick={handleDeleteCategory}
+                disabled={(deletingCategory.item_count > 0 && !moveToCategoryId)}
+                className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50"
+              >
+                {deletingLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMergeModal && mergeSource && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Merge Category</h3>
+            <p className="text-gray-600 mb-2">
+              Move all items from <strong>{mergeSource.name}</strong> to:
+            </p>
+            <select
+              value={mergeTarget}
+              onChange={(e) => setMergeTarget(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 mb-4"
+            >
+              <option value="">Select target category</option>
+              {categories.filter(c => c.id !== mergeSource.id).map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-amber-600 mb-4">
+              After merging, "{mergeSource.name}" will be deleted.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowMergeModal(false)} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button
+                onClick={handleMergeCategories}
+                disabled={!mergeTarget}
+                className="px-4 py-2 bg-indigo-600 text-white rounded disabled:opacity-50"
+              >
+                {mergingLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                Merge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Categories Modal */}
+      {showManageCategoriesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-xl">
+            {/* Header */}
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <h3 className="text-xl font-bold">Manage Categories</h3>
+              <button
+                onClick={() => setShowManageCategoriesModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Split content */}
+            <div className="flex-1 overflow-hidden flex flex-row">
+              {/* Left panel – category list */}
+              <div className="w-1/2 border-r p-4 overflow-y-auto">
+                <div className="text-sm font-medium text-gray-500 mb-2">Categories</div>
+                <div className="space-y-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategoryForActions(cat)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition flex justify-between items-center ${selectedCategoryForActions?.id === cat.id
+                        ? 'bg-indigo-50 text-indigo-700 font-medium'
+                        : 'hover:bg-gray-50'
+                        }`}
+                    >
+                      <span>{cat.name}</span>
+                      <span className="text-gray-400 text-xs">{cat.item_count ?? 0}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right panel – category details & actions */}
+              <div className="w-1/2 p-4 overflow-y-auto">
+                {selectedCategoryForActions ? (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <div className="text-gray-900">{selectedCategoryForActions.name}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Items</label>
+                      <div className="text-gray-900">{selectedCategoryForActions.item_count ?? 0}</div>
+                    </div>
+                    <div className="border-t pt-4 space-y-2">
+                      <button
+                        onClick={() => {
+                          setShowManageCategoriesModal(false);
+                          setRenamingCategory(selectedCategoryForActions);
+                          setNewCategoryName(selectedCategoryForActions.name);
+                          setShowRenameModal(true);
+                        }}
+                        className="w-full text-left px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
+                      >
+                        ✏️ Rename Category
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowManageCategoriesModal(false);
+                          setMergeSource(selectedCategoryForActions);
+                          setMergeTarget('');
+                          setShowMergeModal(true);
+                        }}
+                        className="w-full text-left px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
+                        disabled={categories.length <= 1}
+                      >
+                        🔀 Merge into another category
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowManageCategoriesModal(false);
+                          setDeletingCategory(selectedCategoryForActions);
+                          setMoveToCategoryId('');
+                          setShowDeleteCategoryModal(true);
+                        }}
+                        className="w-full text-left px-3 py-2 bg-gray-100 hover:bg-red-100 rounded-md text-red-600"
+                      >
+                        🗑️ Delete Category
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-400 py-12">
+                    Select a category from the left panel
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer with “New Category” button */}
+            <div className="px-6 py-4 border-t flex justify-end">
+              <button
+                onClick={() => {
+                  setShowManageCategoriesModal(false);
+                  setShowCategoryModal(true);
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+              >
+                + New Category
               </button>
             </div>
           </div>
