@@ -2,7 +2,7 @@ const { z } = require('zod');
 const pool = require('../../config/db');
 const { generateId } = require('../../utils/generateId');
 const admin = require('../../config/firebase');
-const inventoryService = require('../inventory/inventory.service');
+// const inventoryService = require('../inventory/inventory.service');
 const {
   createOrderSchema
 } = require('./order.schema');
@@ -114,7 +114,7 @@ async function createPublicOrder(request, reply) {
   const { generateId } = require('../../utils/generateId');
   const admin = require('../../config/firebase');
   const orderService = require('./order.service');
-  const inventoryService = require('../inventory/inventory.service');
+  // const inventoryService = require('../inventory/inventory.service');
 
   const publicOrderSchema = z.object({
     outletId: z.string(),
@@ -200,14 +200,14 @@ async function createPublicOrder(request, reply) {
     }
 console.log('Calling inventory deduction for order', orderId);
     // ***** INVENTORY DEDUCTION *****
-    await inventoryService.deductIngredientsForOrderItems(
-      validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
-      organizationId,
-      outletId,
-      orderId,
-      null
-    );
-    console.log('Inventory deduction finished');
+    // await inventoryService.deductIngredientsForOrderItems(
+    //   validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+    //   organizationId,
+    //   outletId,
+    //   orderId,
+    //   null
+    // );
+    // console.log('Inventory deduction finished');
     // *****************************
 
     await client.query('COMMIT');

@@ -43,6 +43,20 @@
       "when": 1779008406456,
       "tag": "0005_dark_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780808131168,
+      "tag": "0006_magical_jetstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780825256404,
+      "tag": "0007_aromatic_the_phantom",
+      "breakpoints": true
     }
   ]
 }

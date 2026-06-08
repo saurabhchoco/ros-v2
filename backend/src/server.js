@@ -13,11 +13,15 @@ const reportRoutes = require('./modules/reports/report.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 const outletRoutes = require('./modules/outlets/outlet.routes');
 const organizationRoutes = require('./modules/organizations/organization.routes');
-const inventoryRoutes = require('./modules/inventory/inventory.routes');
+const inventoryUnitsRoutes = require('./modules/inventory/units/units.routes');
 const shiftRoutes = require('./modules/shift/shift.routes');
 
 const analyticsRoutes = require('./routes/analytics.routes');
 
+const inventoryVendorRoutes = require('./modules/inventory/vendors/vendors.routes');
+const masterItemsRoutes = require('./modules/inventory/masterItems/masterItems.routes');
+const inventoryCategoriesRoutes = require('./modules/inventory/categories/categories.routes');
+const itemCategoriesRoutes = require('./modules/inventory/itemCategories/itemCategories.routes');
 
 const helmet =
   require('@fastify/helmet');
@@ -145,9 +149,13 @@ app.register(orderRoutes);
 app.register(reportRoutes);
 app.register(menuRoutes);
 app.register(adminRoutes);
-app.register(inventoryRoutes);
+app.register(inventoryUnitsRoutes);
 app.register(shiftRoutes);
 app.register(analyticsRoutes);
+app.register(inventoryVendorRoutes);
+app.register(masterItemsRoutes);
+app.register(inventoryCategoriesRoutes);
+app.register(itemCategoriesRoutes);
 
 const start = async () => {
   try {

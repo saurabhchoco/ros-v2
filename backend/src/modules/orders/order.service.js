@@ -12,7 +12,7 @@ const {
   updateOrderInKDS
 } = require('../kds/kdsRealtime.service');
 
-const inventoryService = require('../inventory/inventory.service');
+// const inventoryService = require('../inventory/inventory.service');
 const { getActiveShiftForUser } = require('../shift/shift.service');
 
 async function createOrder(data, userId = null) {

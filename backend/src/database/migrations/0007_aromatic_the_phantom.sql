@@ -1,0 +1,2 @@
+ALTER TABLE "outlet_categories" ADD CONSTRAINT "uq_outlet_category_name" UNIQUE("organization_id","outlet_id","name");--> statement-breakpoint
+ALTER TABLE "outlet_item_categories" ADD CONSTRAINT "uq_outlet_item_category" UNIQUE("outlet_id","master_item_id");

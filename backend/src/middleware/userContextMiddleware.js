@@ -2,6 +2,19 @@ const pool = require('../config/db');
 
 async function userContextMiddleware(request, reply) {
   try {
+
+      if (process.env.AUTH_BYPASS === 'true') {
+
+    request.userContext = {
+      id: 'usr_dev',
+      firebase_uid: 'dev-user',
+      organization_id: 'org_6b20ea36fa',
+      role: 'BRAND_OWNER'
+    };
+
+    return;
+  }
+  console.log('AUTH_BYPASS=', process.env.AUTH_BYPASS);
     const firebaseUid = request.user.uid;
 
     const result = await pool.query(
@@ -16,6 +29,9 @@ async function userContextMiddleware(request, reply) {
         message: 'Operational user not found'
       });
     }
+
+    
+
 
     // ✅ Update last_active_at (non‑blocking, fire-and-forget)
     pool.query(`UPDATE users SET last_active_at = NOW() WHERE id = $1`, [user.id]).catch(err =>

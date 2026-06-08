@@ -32,6 +32,14 @@ import InventoryList from '../pages/InventoryList';
 import ShiftHandover from '../pages/ShiftHandover';
 import OutletStaff from '../pages/owner/OutletStaff';
 
+import InventoryUnitsManagement from '../pages/owner/InventoryUnitsManagement';
+import InventoryItemCategoryMapping from '../pages/owner/InventoryItemCategoryMapping';
+
+import InventoryVendors from '../pages/owner/InventoryVendors';
+import InventoryCategories from '../pages/owner/InventoryCategories';
+import InventoryMasterItems from '../pages/owner/InventoryMasterItems';
+
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -79,7 +87,7 @@ export const router = createBrowserRouter([
         )
       },
 
-       // Admin routes — SUPER_ADMIN only
+      // Admin routes — SUPER_ADMIN only
       {
         path: 'admin',
         element: (
@@ -211,7 +219,59 @@ export const router = createBrowserRouter([
             <OutletStaff />
           </ProtectedRoute>
         )
-      }
+      },
+
+      {
+        path: 'owner/inventory/units',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryUnitsManagement />
+          </ProtectedRoute>
+        )
+      },
+
+      // ... inside the children array
+      {
+        path: 'owner/inventory/item-categories',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryItemCategoryMapping />
+          </ProtectedRoute>
+        )
+      },
+
+      {
+        path: 'owner/inventory/vendors',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryVendors />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/inventory/categories',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryCategories />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/inventory/master-items',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryMasterItems />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'owner/inventory/item-categories',
+        element: (
+          <ProtectedRoute roles={['BRAND_OWNER']}>
+            <InventoryItemCategoryMapping />
+          </ProtectedRoute>
+        )
+      },
     ]
   }
 ]);
