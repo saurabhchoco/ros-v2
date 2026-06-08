@@ -55,7 +55,7 @@ app.register(cors, {
 
       "http://127.0.0.1:5173",
       "https://ros-v2-ruby.vercel.app",
-      "https://ros-v2-pre-prod.up.railway.app"
+      "https://ros-v2-preprod.vercel.app"
 
     ];
 
