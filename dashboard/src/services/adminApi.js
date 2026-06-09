@@ -7,7 +7,8 @@ const API_URL =
 const getAuthHeaders = async () => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken(true);
+  // const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -109,7 +110,8 @@ export const adminApi = {
 
   // Menu CSV upload
   async uploadMenuCSV(file, organizationId, outletId) {
-    const token = await auth.currentUser.getIdToken(true);
+    // const token = await auth.currentUser.getIdToken(true);
+    const token = await auth.currentUser.getIdToken();
     const formData = new FormData();
     formData.append('file', file);
     formData.append('organizationId', organizationId);

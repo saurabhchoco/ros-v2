@@ -46,12 +46,12 @@ export default function BrandOwnerDashboard() {
       .finally(() => setSummaryLoading(false));
   }, []);
 
-  const fetchStockHealth = async () => {
-    try {
-      const res = await apiService.getInventoryHealth();
-      setStockHealth(res.data.data);
-    } catch (err) { console.error(err); }
-  };
+  // const fetchStockHealth = async () => {
+  //   try {
+  //     const res = await apiService.getInventoryHealth();
+  //     setStockHealth(res.data.data);
+  //   } catch (err) { console.error(err); }
+  // };
 
   const fetchRevenueTrend = async () => {
     try {
@@ -74,7 +74,7 @@ export default function BrandOwnerDashboard() {
 
   useEffect(() => {
     if (outlet?.organizationId) {
-      Promise.all([fetchRevenueTrend(), fetchOrderStatus(), fetchOutletComparison(), fetchStockHealth()])
+      Promise.all([fetchRevenueTrend(), fetchOrderStatus(), fetchOutletComparison()])
         .finally(() => setChartsLoading(false));
     }
   }, [outlet]);
@@ -133,10 +133,10 @@ export default function BrandOwnerDashboard() {
     //       : `${summary.pendingOrders} orders awaiting action`
     // });
 
-    insights.push({
-      title: "Stock Health",
-      value: `${stockHealth?.stockHealthPct || 100}% inventory healthy`
-    });
+    // insights.push({
+    //   title: "Stock Health",
+    //   value: `${stockHealth?.stockHealthPct || 100}% inventory healthy`
+    // });
     // insights.push(`${topOutlet.name} generated ${((topOutlet.revenue / (summary?.totalRevenue || 1)) * 100).toFixed(0)}% of revenue`);
   }
   if (topItems[0]) {
@@ -169,7 +169,7 @@ export default function BrandOwnerDashboard() {
         description="Monitor performance across all outlets"
       />
 
-      {!summaryLoading && summary && (
+      {/* {!summaryLoading && summary && (
         <HealthScoreCard
           score={96}
           status="A+"
@@ -180,7 +180,7 @@ export default function BrandOwnerDashboard() {
             "All Systems Operational"
           ]}
         />
-      )}
+      )} */}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -228,12 +228,12 @@ export default function BrandOwnerDashboard() {
               accent='danger'
             />
 
-            <MetricCard
+            {/* <MetricCard
               label="Stock Health"
               value={`${stockHealth?.stockHealthPct || 100}%`}
               subtitle={`${stockHealth?.lowStockCount || 0} low stock items`}
               icon={Package}
-            />
+            /> */}
           </>
         )}
       </div>

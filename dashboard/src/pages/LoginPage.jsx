@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -20,8 +20,32 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
+  // Prevent double‑click during login
+  const isSubmitting = useRef(false);
+
+  useEffect(() => {
+  const handler = () => {
+    navigate('/', { replace: true });
+  };
+
+  window.addEventListener(
+    'auth-ready',
+    handler
+  );
+
+  return () =>
+    window.removeEventListener(
+      'auth-ready',
+      handler
+    );
+}, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Guard against multiple submissions
+    if (isSubmitting.current || loading) return;
+
     setError('');
 
     if (!email || !password) {
@@ -29,11 +53,16 @@ export default function LoginPage() {
       return;
     }
 
+    isSubmitting.current = true;
     setLoading(true);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/');
+      // Do NOT reset loading or isSubmitting on success – the page will unmount.
+      console.log('Firebase login successfull');
+      // navigate('/');
+      // window.location.href = '/';
+      console.log('NAVIGATED');
     } catch (err) {
       console.error(err);
 
@@ -44,8 +73,10 @@ export default function LoginPage() {
       } else {
         setError('Login failed. Please try again.');
       }
-    } finally {
+
+      // Only reset loading on error so the button becomes clickable again
       setLoading(false);
+      isSubmitting.current = false;
     }
   };
 

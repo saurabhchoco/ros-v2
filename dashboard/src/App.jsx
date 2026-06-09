@@ -11,28 +11,55 @@ export default function App() {
   const { setUser, setOutlet, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        try {
-          const res = await apiService.getMe();
-          if (res.data.success) {
-            setOutlet(res.data.data);
+    let mounted = true;
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (firebaseUser) => {
+        if (!mounted) return;
+
+        console.log(
+          'AUTH STATE CHANGED',
+          firebaseUser?.uid
+        );
+
+        if (firebaseUser) {
+          try {
+            const res = await apiService.getMe();
+
+            if (!mounted) return;
+
+            setUser(firebaseUser);
+
+            if (res.data.success) {
+              setOutlet(res.data.data);
+            }
+            window.dispatchEvent(
+              new Event('auth-ready')
+            );
+          } catch (err) {
+            console.error(err);
           }
-        } catch (err) {
-          console.error('Failed to load outlet:', err);
+        } else {
           setUser(null);
+          setOutlet(null);
+        }
+
+        if (mounted) {
+          setLoading(false);
         }
       }
-      setLoading(false);
-    });
+    );
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return (
     <>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,

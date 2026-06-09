@@ -8,7 +8,7 @@ const API_URL =
 const getAuthHeaders = async () => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
   return { 'Authorization': `Bearer ${token}` };
   // No 'Content-Type' header – let Axios set it automatically
 };
