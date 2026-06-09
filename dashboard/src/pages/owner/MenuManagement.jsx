@@ -243,9 +243,6 @@ const EditItemModal = ({ item, onClose, onSave, saving }) => {
             <input type="checkbox" name="isVeg" checked={form.isVeg} onChange={handleChange} disabled={saving} /> Veg
           </label>
           <input name="taxPercentage" type="number" value={form.taxPercentage} onChange={handleChange} placeholder="Tax %" className="w-full border p-2 rounded" disabled={saving} />
-          <label className="flex items-center gap-2">
-            <input type="checkbox" name="isAvailable" checked={form.isAvailable} onChange={handleChange} disabled={saving} /> Available
-          </label>
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <button onClick={onClose} disabled={saving} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
@@ -1144,7 +1141,7 @@ const handleMergeCategories = async () => {
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 flex-1">
-                            <span className="text-lg mt-0.5">{item.is_veg ? '🟢' : '🔴'}</span>
+                            <span className={`inline-block w-4 h-4 rounded-full mt-0.5 ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
                             <div className="flex-1">
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 <span className="font-medium text-gray-800">{item.name}</span>
@@ -1240,7 +1237,6 @@ const handleMergeCategories = async () => {
                 {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
               <label className="flex items-center gap-2"><input type="checkbox" checked={newItemForm.isVeg} onChange={e => setNewItemForm({ ...newItemForm, isVeg: e.target.checked })} disabled={savingModal} /> Veg</label>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={newItemForm.isAvailable} onChange={e => setNewItemForm({ ...newItemForm, isAvailable: e.target.checked })} disabled={savingModal} /> Available</label>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowItemModal(false)} disabled={savingModal} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>

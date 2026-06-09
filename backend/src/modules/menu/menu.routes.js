@@ -163,6 +163,7 @@ async function menuRoutes(app) {
         COUNT(CASE WHEN mi.status = 'active' THEN 1 END) AS active_items,
         COUNT(CASE WHEN mi.status = 'hidden' THEN 1 END) AS hidden_items,
         COUNT(CASE WHEN mi.status = 'draft' THEN 1 END) AS draft_items,
+        COUNT(CASE WHEN mi.status = 'out_of_stock' THEN 1 END) AS out_of_stock_items,
         COUNT(CASE WHEN mi.description IS NULL OR mi.description = '' THEN 1 END) AS missing_description
       FROM menu_items mi
       WHERE mi.outlet_id = $1
@@ -188,7 +189,8 @@ async function menuRoutes(app) {
           hidden_items: parseInt(stats.hidden_items) || 0,
           draft_items: parseInt(stats.draft_items) || 0,
           missing_description: parseInt(stats.missing_description) || 0,
-          health_score: score
+          health_score: score,
+          out_of_stock_items: parseInt(stats.out_of_stock_items) || 0
         }
       });
     } catch (err) {

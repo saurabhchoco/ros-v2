@@ -106,6 +106,33 @@ async function createMenuItem(data, userContext) {
     name, basePrice, description, isVeg, taxPercentage, isAvailable,
     categoryId, organizationId, outletId, itemCode, status
   } = data;
+
+  // ----- Handle missing category: create or use "Uncategorized" -----
+  let finalCategoryId = categoryId;
+  if (!finalCategoryId) {
+    const defaultCatName = 'Uncategorized';
+    const existing = await pool.query(
+      `SELECT id FROM menu_categories WHERE name = $1 AND outlet_id = $2 AND organization_id = $3`,
+      [defaultCatName, outletId, organizationId]
+    );
+    if (existing.rows.length) {
+      finalCategoryId = existing.rows[0].id;
+    } else {
+      const newId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+      const orderRes = await pool.query(
+        `SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM menu_categories WHERE outlet_id = $1`,
+        [outletId]
+      );
+      await pool.query(
+        `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [newId, defaultCatName, outletId, organizationId, orderRes.rows[0].next_order]
+      );
+      finalCategoryId = newId;
+    }
+  }
+  // ----------------------------------------------------------------
+
   const id = generateId('itm');
   const query = `
     INSERT INTO menu_items (
@@ -118,7 +145,7 @@ async function createMenuItem(data, userContext) {
   const values = [
     id, name, basePrice, description, isVeg, taxPercentage || 0,
     isAvailable !== undefined ? isAvailable : true,
-    categoryId, organizationId, outletId,
+    finalCategoryId, organizationId, outletId,
     itemCode || null, status || 'active', 'SIMPLE'
   ];
   const result = await pool.query(query, values);

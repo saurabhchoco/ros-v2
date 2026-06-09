@@ -57,6 +57,7 @@ export default function MenuHealth({ outletId, compact = false }) {
     active_items = 0,
     hidden_items = 0,
     draft_items = 0,
+    out_of_stock_items = 0,
     missing_description = 0,
     health_score = 0
   } = healthData;
@@ -65,7 +66,7 @@ export default function MenuHealth({ outletId, compact = false }) {
   const totalItems = total_items;
   const missingDesc = missing_description;
   const hiddenItems = hidden_items;
-  const outOfStock = draft_items; // assuming draft means not active? Or use status counts. But keep simple.
+  const outOfStock = out_of_stock_items; // assuming draft means not active? Or use status counts. But keep simple.
 
   if (compact) {
     return (
@@ -76,7 +77,7 @@ export default function MenuHealth({ outletId, compact = false }) {
           <div>{totalItems} Items</div>
           <div className="text-yellow-600">{missingDesc} Missing Desc</div>
           <div className="text-gray-500">{hiddenItems} Hidden</div>
-          <div className="text-red-500">{outOfStock} Draft/Out</div>
+          <div className="text-red-500">{outOfStock} Out of stock</div>
         </div>
       </div>
     );

@@ -27,7 +27,7 @@ const createMenuItemSchema =
       z.string(),
 
     categoryId:
-      z.string(),
+      z.string().optional().nullable(),
 
     itemCode:
       z.string().optional(),
