@@ -52,7 +52,7 @@ const createMenuItemSchema =
 const createComboSchema = z.object({
   organizationId: z.string(),
   outletId: z.string(),
-  categoryId: z.string(),
+  categoryId: z.string().optional().nullable(),
   name: z.string().min(2),
   basePrice: z.number().positive(),
   components: z.array(z.object({

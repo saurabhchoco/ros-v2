@@ -338,18 +338,48 @@ async function deleteMenuItem(id, userContext) {
   return true;
 }
 
-async function createCombo(data) {
-  const id = generateId('itm');
-  const result = await pool.query(
+async function createCombo(data, userContext) {
+  const { name, basePrice, categoryId, components, organizationId, outletId } = data;
+  
+  // Normalise: treat empty string as missing
+  let finalCategoryId = (categoryId && categoryId.trim() !== '') ? categoryId : null;
+  
+  if (!finalCategoryId) {
+    // Case‑insensitive search for 'combo' or 'combos'
+    const existing = await pool.query(
+      `SELECT id FROM menu_categories 
+       WHERE LOWER(name) IN ('combo', 'combos')
+       AND outlet_id = $1 AND organization_id = $2`,
+      [outletId, organizationId]
+    );
+    if (existing.rows.length) {
+      finalCategoryId = existing.rows[0].id;
+    } else {
+      const newId = `cat_${crypto.randomBytes(5).toString('hex')}`;
+      const orderRes = await pool.query(
+        `SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM menu_categories WHERE outlet_id = $1`,
+        [outletId]
+      );
+      await pool.query(
+        `INSERT INTO menu_categories (id, name, outlet_id, organization_id, display_order)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [newId, 'Combos', outletId, organizationId, orderRes.rows[0].next_order]
+      );
+      finalCategoryId = newId;
+    }
+  }
+  
+  const itemId = generateId('itm');
+  await pool.query(
     `INSERT INTO menu_items (
-      id, organization_id, outlet_id, category_id, name, base_price,
-      tax_percentage, is_veg, is_available, item_type, components
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'COMBO', $10)
-    RETURNING *`,
-    [id, data.organizationId, data.outletId, data.categoryId, data.name,
-      data.basePrice, 0, true, true, JSON.stringify(data.components)]
+      id, name, base_price, description, is_veg, tax_percentage,
+      status, item_type, organization_id, outlet_id, category_id,
+      is_available, components
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    [itemId, name, basePrice, null, true, 0, 'active', 'COMBO',
+     organizationId, outletId, finalCategoryId, true, JSON.stringify(components)]
   );
-  return result.rows[0];
+  return { id: itemId, name, basePrice, categoryId: finalCategoryId };
 }
 
 /**

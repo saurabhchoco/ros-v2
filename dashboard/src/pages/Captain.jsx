@@ -3,20 +3,20 @@ import { apiService } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getTenantContext } from '../utils/tenantContext';
 import Skeleton from '../components/ui/Skeleton';
-import { Plus, ShoppingCart, X, Search, Minus } from 'lucide-react';
+import { Plus, ShoppingCart, X, Search, Minus, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useMenuStore from '../store/menuStore';
 import Button from '../components/ui/Button';
 
 // --- Memoised Compact Menu Tile (Horizontal) ---
-const MenuTile = React.memo(({ item, quantity, disabled, onAdd, onUpdate }) => {
+const MenuTile = React.memo(({ item, quantity, disabled, onAdd, onUpdate, isOutOfStock }) => {
   const price = parseFloat(item.base_price || 0);
   return (
     <div className="bg-white rounded-xl border border-gray-100 hover:shadow-sm transition-all duration-150 p-3 flex flex-col">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-base">{item.is_veg ? '🥬' : '🍗'}</span>
+            <span className={`inline-block w-4 h-4 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
             <h3 className="font-medium text-gray-800 text-sm line-clamp-1">{item.name}</h3>
           </div>
           {item.description && (
@@ -25,7 +25,9 @@ const MenuTile = React.memo(({ item, quantity, disabled, onAdd, onUpdate }) => {
           <span className="text-indigo-600 font-semibold text-base mt-1 inline-block">₹{price.toFixed(0)}</span>
         </div>
         <div className="ml-3">
-          {quantity === 0 ? (
+          {isOutOfStock ? (
+            <span className="text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded">Out of stock</span>
+          ) : quantity === 0 ? (
             <button
               onClick={() => onAdd(item)}
               disabled={disabled}
@@ -109,6 +111,11 @@ export default function Captain() {
   const isManagerRole = ['OUTLET_MANAGER', 'ARM'].includes(outlet?.role);
   const canAddToCart = isManagerRole ? true : hasActiveShift;
 
+  const getVisibleItems = (items) => {
+    if (!items) return [];
+    return items.filter(item => item.status !== 'hidden' && item.status !== 'draft');
+  };
+
   // --- Detect desktop ---
   useEffect(() => {
     const checkWidth = () => setIsDesktop(window.innerWidth >= 1024);
@@ -152,15 +159,19 @@ export default function Captain() {
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase();
-    return allItems.filter(item =>
-      item.name.toLowerCase().includes(term) ||
-      (item.description && item.description.toLowerCase().includes(term)) ||
-      (item.sku && item.sku.toLowerCase().includes(term))
+    const filtered = allItems.filter(item =>
+      (item.name.toLowerCase().includes(term) ||
+        (item.description && item.description.toLowerCase().includes(term)) ||
+        (item.sku && item.sku.toLowerCase().includes(term))) &&
+      item.status !== 'hidden' &&
+      item.status !== 'draft'
     );
+    return filtered;
   }, [allItems, searchTerm]);
 
-  const displayItems = searchTerm.trim() ? searchResults : (itemsByCategory[activeCategory] || []);
-  const categoryLoading = searchTerm.trim() ? false : (loadingItems[activeCategory] || false);
+  const displayItems = searchTerm.trim()
+    ? searchResults
+    : getVisibleItems(itemsByCategory[activeCategory] || []); const categoryLoading = searchTerm.trim() ? false : (loadingItems[activeCategory] || false);
   const isGlobalLoading = loadingAllItems && loading;
 
   // --- Cart helpers ---
@@ -274,47 +285,47 @@ export default function Captain() {
 
   if (!outlet) return <div className="flex items-center justify-center h-full text-red-500">No outlet assigned</div>;
   if (isGlobalLoading) return <div className="flex justify-center items-center h-full">Loading menu...</div>;
-if (orderSuccess) {
-  const grandTotal = typeof orderSuccess.grand_total === 'number' 
-    ? orderSuccess.grand_total 
-    : parseFloat(orderSuccess.grand_total) || 0;
-  return (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-      <div className="bg-green-50 rounded-full p-4 mb-4">
-        <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h2>
-      {orderSuccess.token_number && (
-        <p className="text-gray-600 mb-4">
-          Token: <span className="font-mono font-bold">{orderSuccess.token_number}</span>
+  if (orderSuccess) {
+    const grandTotal = typeof orderSuccess.grand_total === 'number'
+      ? orderSuccess.grand_total
+      : parseFloat(orderSuccess.grand_total) || 0;
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+        <div className="bg-green-50 rounded-full p-4 mb-4">
+          <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h2>
+        {orderSuccess.token_number && (
+          <p className="text-gray-600 mb-4">
+            Token: <span className="font-mono font-bold">{orderSuccess.token_number}</span>
+          </p>
+        )}
+        <p className="text-gray-600 mb-6">
+          Total: ₹{grandTotal.toFixed(2)}
         </p>
-      )}
-      <p className="text-gray-600 mb-6">
-        Total: ₹{grandTotal.toFixed(2)}
-      </p>
-      <button
-        onClick={() => {
-          setOrderSuccess(null);
-          setCart([]);
-          setTableNumber('');
-          setTokenNumber('');
-          setCustomerName('');
-          setCustomerMobile('');
-          setOrderSource('DINE_IN');
-          setPaymentMethod('CASH');
-          setDiscountValue(0);
-          setDiscountReason('');
-          setShowCustomerDetails(false);
-        }}
-        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-      >
-        Place Another Order
-      </button>
-    </div>
-  );
-}
+        <button
+          onClick={() => {
+            setOrderSuccess(null);
+            setCart([]);
+            setTableNumber('');
+            setTokenNumber('');
+            setCustomerName('');
+            setCustomerMobile('');
+            setOrderSource('DINE_IN');
+            setPaymentMethod('CASH');
+            setDiscountValue(0);
+            setDiscountReason('');
+            setShowCustomerDetails(false);
+          }}
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+        >
+          Place Another Order
+        </button>
+      </div>
+    );
+  }
 
   // --- Cart panel component (reused for desktop sidebar & mobile drawer) ---
   const CartPanel = ({ isDrawer = false }) => (
@@ -469,18 +480,16 @@ if (orderSuccess) {
                 <button
                   type="button"
                   onClick={() => setDiscountType('percentage')}
-                  className={`px-2 py-1 text-xs rounded-md transition ${
-                    discountType === 'percentage' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
-                  }`}
+                  className={`px-2 py-1 text-xs rounded-md transition ${discountType === 'percentage' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
+                    }`}
                 >
                   %
                 </button>
                 <button
                   type="button"
                   onClick={() => setDiscountType('fixed')}
-                  className={`px-2 py-1 text-xs rounded-md transition ${
-                    discountType === 'fixed' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
-                  }`}
+                  className={`px-2 py-1 text-xs rounded-md transition ${discountType === 'fixed' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
+                    }`}
                 >
                   ₹
                 </button>
@@ -574,11 +583,10 @@ if (orderSuccess) {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all min-h-[36px] ${
-                  activeCategory === cat.id
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all min-h-[36px] ${activeCategory === cat.id
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 {cat.name}
               </button>
@@ -597,18 +605,29 @@ if (orderSuccess) {
               </div>
             ))
           ) : displayItems.length === 0 ? (
-            <div className="col-span-full text-center text-gray-400 py-16">
-              {searchTerm ? `No items match "${searchTerm}"` : 'No items in this category'}
+            <div className="col-span-full text-center py-16">
+              <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Package className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">No menu items available</h3>
+              <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                {!outletId
+                  ? "Your account is not linked to an outlet. Please contact your administrator."
+                  : "This outlet currently has no menu items. Check back later."}
+              </p>
             </div>
           ) : (
             displayItems.map(item => {
               const quantity = cartMap.get(item.id) || 0;
+              const isOutOfStock = item.status === 'out_of_stock';
+              const isDisabled = !canAddToCart || isOutOfStock;
               return (
                 <MenuTile
                   key={item.id}
                   item={item}
                   quantity={quantity}
-                  disabled={!canAddToCart}
+                  disabled={isDisabled}
+                  isOutOfStock={isOutOfStock}
                   onAdd={addToCart}
                   onUpdate={updateQuantity}
                 />

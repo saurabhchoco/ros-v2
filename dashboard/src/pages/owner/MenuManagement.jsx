@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import MenuHealth from '../../components/MenuHealth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { createPortal } from 'react-dom';
+import { Package, Plus } from 'lucide-react';
 
 // ========== Custom hook for dropdowns with portal and scroll container ==========
 const useDropdown = (scrollContainerRef) => {
@@ -319,7 +320,7 @@ const ComboModal = ({ onClose, onSave, availableItems, categoryId, saving }) => 
     await onSave({
       name: name.trim(),
       basePrice: finalPrice,
-      categoryId,
+      categoryId: categoryId || null,
       components: components.map(c => ({
         itemId: c.itemId,
         quantity: c.quantity,
@@ -591,58 +592,58 @@ export default function MenuManagement() {
 
   // Batch handlers (unchanged)
 
-const handleRenameCategory = async () => {
-  if (!newCategoryName.trim()) return;
-  setRenamingLoading(true);
-  try {
-    await apiService.updateCategory(renamingCategory.id, newCategoryName);
-    toast.success('Category renamed');
-    setShowRenameModal(false);
-    setRenamingCategory(null);
-    setNewCategoryName('');
-    await refreshCategories();
-  } catch (err) {
-    toast.error('Rename failed');
-  } finally {
-    setRenamingLoading(false);
-  }
-};
+  const handleRenameCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setRenamingLoading(true);
+    try {
+      await apiService.updateCategory(renamingCategory.id, newCategoryName);
+      toast.success('Category renamed');
+      setShowRenameModal(false);
+      setRenamingCategory(null);
+      setNewCategoryName('');
+      await refreshCategories();
+    } catch (err) {
+      toast.error('Rename failed');
+    } finally {
+      setRenamingLoading(false);
+    }
+  };
 
-const handleDeleteCategory = async () => {
-  if (!deletingCategory) return;
-  setDeletingLoading(true);
-  try {
-    await apiService.deleteCategory(deletingCategory.id, moveToCategoryId || null);
-    toast.success('Category deleted');
-    setShowDeleteCategoryModal(false);
-    setDeletingCategory(null);
-    setMoveToCategoryId('');
-    await refreshCategories();
-    if (activeCategory === deletingCategory.id) setActiveCategory(null);
-  } catch (err) {
-    toast.error(err.response?.data?.error || 'Delete failed');
-  } finally {
-    setDeletingLoading(false);
-  }
-};
+  const handleDeleteCategory = async () => {
+    if (!deletingCategory) return;
+    setDeletingLoading(true);
+    try {
+      await apiService.deleteCategory(deletingCategory.id, moveToCategoryId || null);
+      toast.success('Category deleted');
+      setShowDeleteCategoryModal(false);
+      setDeletingCategory(null);
+      setMoveToCategoryId('');
+      await refreshCategories();
+      if (activeCategory === deletingCategory.id) setActiveCategory(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Delete failed');
+    } finally {
+      setDeletingLoading(false);
+    }
+  };
 
-const handleMergeCategories = async () => {
-  if (!mergeSource || !mergeTarget) return;
-  setMergingLoading(true);
-  try {
-    await apiService.mergeCategories(mergeSource.id, mergeTarget);
-    toast.success('Categories merged');
-    setShowMergeModal(false);
-    setMergeSource(null);
-    setMergeTarget('');
-    await refreshCategories();
-    if (activeCategory === mergeSource.id) setActiveCategory(null);
-  } catch (err) {
-    toast.error('Merge failed');
-  } finally {
-    setMergingLoading(false);
-  }
-};
+  const handleMergeCategories = async () => {
+    if (!mergeSource || !mergeTarget) return;
+    setMergingLoading(true);
+    try {
+      await apiService.mergeCategories(mergeSource.id, mergeTarget);
+      toast.success('Categories merged');
+      setShowMergeModal(false);
+      setMergeSource(null);
+      setMergeTarget('');
+      await refreshCategories();
+      if (activeCategory === mergeSource.id) setActiveCategory(null);
+    } catch (err) {
+      toast.error('Merge failed');
+    } finally {
+      setMergingLoading(false);
+    }
+  };
 
   const refreshCategories = async () => {
     const res = await apiService.getCategories(organizationId, targetOutletId, true);
@@ -1120,7 +1121,24 @@ const handleMergeCategories = async () => {
             </div>
             <div className="divide-y divide-gray-100">
               {filteredAndSortedItems.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">No items found</div>
+                <div className="py-16 px-4 text-center">
+                  <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <Package className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No menu items yet</h3>
+                  <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+                    {activeCategory
+                      ? `This category has no items. Add your first menu item.`
+                      : `Get started by adding your first menu item or importing csv.`}
+                  </p>
+                  <button
+                    onClick={() => setShowAddDropdown(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Menu Item
+                  </button>
+                </div>
               ) : (
                 filteredAndSortedItems.map((item) => (
                   <div
@@ -1141,7 +1159,7 @@ const handleMergeCategories = async () => {
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 flex-1">
-                            <span className={`inline-block w-4 h-4 rounded-full mt-0.5 ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                            <span className={`inline-block w-4 h-4 rounded-full mt-0.5 ${item.is_veg ? 'bg-green-700' : 'bg-red-800'}`}></span>
                             <div className="flex-1">
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 <span className="font-medium text-gray-800">{item.name}</span>
@@ -1213,7 +1231,7 @@ const handleMergeCategories = async () => {
           onClose={() => setShowComboModal(false)}
           onSave={createCombo}
           availableItems={availableItems}
-          categoryId={activeCategory || categories[0]?.id}
+          categoryId={null}
           saving={savingModal}
         />
       )}
@@ -1459,28 +1477,28 @@ const handleMergeCategories = async () => {
         </div>
       )}
 
-{showRenameModal && renamingCategory && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-      <h3 className="text-xl font-bold mb-4">Rename Category</h3>
-      <input
-        type="text"
-        value={newCategoryName}
-        onChange={(e) => setNewCategoryName(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2 mb-4"
-        autoFocus
-        disabled={renamingLoading}
-      />
-      <div className="flex justify-end gap-2">
-        <button onClick={() => setShowRenameModal(false)} disabled={renamingLoading} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
-        <button onClick={handleRenameCategory} disabled={renamingLoading} className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-2">
-          {renamingLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-          Save
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {showRenameModal && renamingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Rename Category</h3>
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 mb-4"
+              autoFocus
+              disabled={renamingLoading}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowRenameModal(false)} disabled={renamingLoading} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button onClick={handleRenameCategory} disabled={renamingLoading} className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-2">
+                {renamingLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDeleteCategoryModal && deletingCategory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
