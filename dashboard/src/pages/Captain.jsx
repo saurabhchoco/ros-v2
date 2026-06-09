@@ -81,6 +81,7 @@ export default function Captain() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -94,6 +95,12 @@ export default function Captain() {
   const [tokenNumber, setTokenNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
+
+  const tableNumberRef = useRef('');
+  const tokenNumberRef = useRef('');
+  const customerNameRef = useRef('');
+  const customerMobileRef = useRef('');
+
   const [orderSource, setOrderSource] = useState('DINE_IN');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
@@ -116,6 +123,13 @@ export default function Captain() {
     return items.filter(item => item.status !== 'hidden' && item.status !== 'draft');
   };
 
+  useEffect(() => {
+    tableNumberRef.current = tableNumber;
+    tokenNumberRef.current = tokenNumber;
+    customerNameRef.current = customerName;
+    customerMobileRef.current = customerMobile;
+  }, [tableNumber, tokenNumber, customerName, customerMobile]);
+
   // --- Detect desktop ---
   useEffect(() => {
     const checkWidth = () => setIsDesktop(window.innerWidth >= 1024);
@@ -127,6 +141,7 @@ export default function Captain() {
   // --- Fetch categories & all items on mount ---
   useEffect(() => {
     if (!organizationId || !outletId) {
+      setInitialLoading(false);
       setLoading(false);
       return;
     }
@@ -142,11 +157,28 @@ export default function Captain() {
         console.error(e);
         toast.error('Failed to load menu');
       } finally {
+        setInitialLoading(false);
         setLoading(false);
       }
     };
     load();
   }, [organizationId, outletId, fetchCategories, fetchAllItems, activeCategory]);
+
+  // --- Refresh menu when tab becomes visible ---
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && organizationId && outletId) {
+        await fetchCategories(organizationId, outletId, apiService);
+        await fetchAllItems(organizationId, outletId, apiService);
+        // Also refresh current category items if they exist
+        if (activeCategory) {
+          await fetchItems(organizationId, outletId, activeCategory, apiService);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [organizationId, outletId, activeCategory, fetchCategories, fetchAllItems, fetchItems]);
 
   // --- Fetch items for selected category if not already loaded ---
   useEffect(() => {
@@ -171,7 +203,8 @@ export default function Captain() {
 
   const displayItems = searchTerm.trim()
     ? searchResults
-    : getVisibleItems(itemsByCategory[activeCategory] || []); const categoryLoading = searchTerm.trim() ? false : (loadingItems[activeCategory] || false);
+    : getVisibleItems(itemsByCategory[activeCategory] || []);
+  const categoryLoading = searchTerm.trim() ? false : (loadingItems[activeCategory] || false);
   const isGlobalLoading = loadingAllItems && loading;
 
   // --- Cart helpers ---
@@ -232,7 +265,7 @@ export default function Captain() {
   const grandTotal = subtotal - discountAmount + cgstAmount + sgstAmount;
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
-  // --- Place order ---
+  // --- Place order with loader ---
   const handlePlaceOrder = async () => {
     if (cart.length === 0) return;
     setPlacing(true);
@@ -259,6 +292,10 @@ export default function Captain() {
       setTokenNumber('');
       setCustomerName('');
       setCustomerMobile('');
+      tableNumberRef.current = '';
+      tokenNumberRef.current = '';
+      customerNameRef.current = '';
+      customerMobileRef.current = '';
       setOrderSource('DINE_IN');
       toast.success('Order placed successfully!');
     } catch (e) {
@@ -284,9 +321,10 @@ export default function Captain() {
   const clearSearch = () => setSearchTerm('');
 
   if (!outlet) return <div className="flex items-center justify-center h-full text-red-500">No outlet assigned</div>;
-  if (isGlobalLoading) return <div className="flex justify-center items-center h-full">Loading menu...</div>;
+  if (initialLoading) return <div className="flex justify-center items-center h-full">Loading menu...</div>;
+
   if (orderSuccess) {
-    const grandTotal = typeof orderSuccess.grand_total === 'number'
+    const grandTotalVal = typeof orderSuccess.grand_total === 'number'
       ? orderSuccess.grand_total
       : parseFloat(orderSuccess.grand_total) || 0;
     return (
@@ -303,7 +341,7 @@ export default function Captain() {
           </p>
         )}
         <p className="text-gray-600 mb-6">
-          Total: ₹{grandTotal.toFixed(2)}
+          Total: ₹{grandTotalVal.toFixed(2)}
         </p>
         <button
           onClick={() => {
@@ -387,9 +425,10 @@ export default function Captain() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Table No.</label>
                   <input
+                    ref={tableNumberRef}
                     type="text"
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(e.target.value)}
+                    defaultValue={tableNumber}
+                    onBlur={(e) => setTableNumber(e.target.value)}
                     placeholder="Optional"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                   />
@@ -397,9 +436,10 @@ export default function Captain() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Token No.</label>
                   <input
+                    ref={tokenNumberRef}
                     type="text"
-                    value={tokenNumber}
-                    onChange={(e) => setTokenNumber(e.target.value)}
+                    defaultValue={tokenNumber}
+                    onBlur={(e) => setTokenNumber(e.target.value)}
                     placeholder="Optional"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                   />
@@ -408,9 +448,10 @@ export default function Captain() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                 <input
+                  ref={customerNameRef}
                   type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  defaultValue={customerName}
+                  onBlur={(e) => setCustomerName(e.target.value)}
                   placeholder="Optional"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                 />
@@ -418,10 +459,18 @@ export default function Captain() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile (WhatsApp)</label>
                 <input
+                  ref={customerMobileRef}
                   type="tel"
-                  value={customerMobile}
-                  onChange={(e) => setCustomerMobile(e.target.value)}
-                  placeholder="Optional"
+                  defaultValue={customerMobile}
+                  onBlur={(e) => setCustomerMobile(e.target.value)}
+                  onInput={(e) => {
+                    // Remove non-digits and limit to 10 characters
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 10) value = value.slice(0, 10);
+                    e.target.value = value;
+                  }}
+                  maxLength="10"
+                  placeholder="Optional (10 digits)"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                 />
               </div>
@@ -539,14 +588,21 @@ export default function Captain() {
             </div>
           </div>
 
-          <Button
+          {/* FIX 1: Place order button with correct total */}
+          <button
             onClick={handlePlaceOrder}
-            loading={placing}
             disabled={placing}
-            className="w-full py-3 text-lg"
+            className="w-full py-3 text-lg bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Place Order • ₹{grandTotal.toFixed(0)}
-          </Button>
+            {placing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Placing...
+              </>
+            ) : (
+              `Place Order • ₹${grandTotal.toFixed(0)}`
+            )}
+          </button>
         </div>
       )}
     </div>
@@ -666,7 +722,3 @@ export default function Captain() {
     </div>
   );
 }
-
-// Add this to your global CSS or tailwind config for the slide animation
-// .animate-slide-in-right { animation: slideInRight 0.3s ease-out; }
-// @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }

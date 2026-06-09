@@ -520,6 +520,9 @@ export default function MenuManagement() {
   const [mergeSource, setMergeSource] = useState(null);
   const [mergeTarget, setMergeTarget] = useState('');
 
+  const user = useAuthStore((s) => s.user);
+  const isBrandOwner = user?.role === 'BRAND_OWNER';
+
   // Load categories & items (same as before)
   useEffect(() => {
     if (!organizationId || !targetOutletId) {
@@ -987,7 +990,11 @@ export default function MenuManagement() {
                 <button onClick={() => { setShowToolsDropdown(false); setShowImportModal(true); }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Import CSV</button>
                 <button onClick={() => { setShowToolsDropdown(false); handleExport(); }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Export CSV</button>
                 <button onClick={() => { setShowToolsDropdown(false); downloadSample(); }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Download Sample CSV</button>
-                <button onClick={() => { setShowToolsDropdown(false); setShowCopyMenuModal(true); }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Copy Menu to Outlet</button>
+                {isBrandOwner && (
+                  <button onClick={() => { setShowToolsDropdown(false); setShowCopyMenuModal(true); }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                    Copy Menu to Outlet
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1435,7 +1442,7 @@ export default function MenuManagement() {
         loading={rowLoading === itemToDelete}
       />
 
-      {showCopyMenuModal && (
+      {isBrandOwner && showCopyMenuModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Copy Menu to Another Outlet</h3>

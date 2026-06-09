@@ -147,7 +147,7 @@ export const router = createBrowserRouter([
       {
         path: 'owner/menu',
         element: (
-          <ProtectedRoute roles={['BRAND_OWNER']}>
+          <ProtectedRoute roles={['BRAND_OWNER', 'OUTLET_MANAGER']}>
             <MenuManagement />
           </ProtectedRoute>
         )

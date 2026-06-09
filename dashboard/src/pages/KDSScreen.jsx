@@ -15,7 +15,7 @@ export default function KDSScreen() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [stats, setStats] = useState({ completedToday: 0, avgPrepTime: 0 });
   const previousOrdersCount = useRef(0);
-  
+
   useSoundAlert(orders);
 
   useEffect(() => {
@@ -50,14 +50,14 @@ export default function KDSScreen() {
     }
   };
 
-const handleCancel = async (orderId, reason) => {
-  try {
-    await apiService.updateOrderStatus(orderId, 'CANCELLED', reason);
-    toast.success('Order cancelled');
-  } catch (error) {
-    toast.error(error.response?.data?.message || 'Failed to cancel order');
-  }
-};
+  const handleCancel = async (orderId, reason) => {
+    try {
+      await apiService.updateOrderStatus(orderId, 'CANCELLED', reason);
+      toast.success('Order cancelled');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
+    }
+  };
 
   // Subscribe to real‑time orders
   useEffect(() => {
@@ -71,6 +71,9 @@ const handleCancel = async (orderId, reason) => {
       outlet.organizationId,
       outlet.outletId,
       (activeOrders) => {
+        if (activeOrders.length > 0) {
+          console.log('Sample order from Firestore:', activeOrders[0]);
+        }
         setOrders(activeOrders);
         setLoading(false);
         // Refresh stats when orders change (new order or status update)
@@ -103,7 +106,7 @@ const handleCancel = async (orderId, reason) => {
       <div className="p-6 h-full flex flex-col">
         <Skeleton className="h-8 w-48 mb-6" />
         <div className="grid grid-cols-3 gap-6">
-          {[1,2,3].map(col => (
+          {[1, 2, 3].map(col => (
             <div key={col} className="bg-gray-100 rounded-2xl p-5">
               <Skeleton className="h-6 w-24 mb-4" />
               <div className="space-y-3">

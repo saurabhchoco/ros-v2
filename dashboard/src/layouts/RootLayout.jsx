@@ -15,7 +15,8 @@ import {
   UserRound,
   Store,
   LogOut,
-  Settings
+  Settings,
+  Menu
 } from 'lucide-react';
 
 import { AppShellNav } from '../components/ui/AppShellNav';
@@ -103,7 +104,8 @@ export default function RootLayout() {
           path: '/captain',
           label: 'Captain',
           icon: UserRound
-        }
+        },
+        { path: '/owner/menu', label: 'Menu', icon: Menu }
       ]
       : []),
 
@@ -128,7 +130,8 @@ export default function RootLayout() {
           path: '/captain',
           label: 'Captain',
           icon: UserRound
-        }
+        },
+        { path: '/owner/menu', label: 'Menu', icon: Menu }
       ]
       : []),
 
