@@ -71,7 +71,7 @@ export default function LoginPage() {
       } else if (err.code === 'auth/wrong-password') {
         setError('Incorrect password');
       } else {
-        setError('Login failed. Please try again.');
+        setError('Login failed. Please check your credentials & try again.');
       }
 
       // Only reset loading on error so the button becomes clickable again

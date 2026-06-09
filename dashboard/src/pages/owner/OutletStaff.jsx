@@ -10,6 +10,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { Menu, Transition } from '@headlessui/react';
+import TeamEmptyState from '../../components/team/TeamEmptyState';
 
 export default function OutletStaff() {
   const navigate = useNavigate();
@@ -169,132 +170,132 @@ export default function OutletStaff() {
           </div>
         )}
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {staff.map((member) => {
-            const shift = getShiftStatus(member.shift_status, member.shift_started_at);
-            const ringColor = roleRingColors[member.role] || roleRingColors.default;
-            const lastActive = formatLastActive(member.last_active_at);
-            return (
-              <div
-                key={member.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
-                onClick={() => {
-                  setSelectedStaff(member);
-                  setDrawerOpen(true);
-                }}
-              >
-                <div className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`rounded-full ${ringColor}`}>
-                        <UserCircleIcon className="h-10 w-10 text-gray-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-800 text-lg">{member.full_name}</h3>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                            {member.role}
-                          </span>
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${shift.bg}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${shift.dot}`}></span>
-                            {shift.text}
-                          </span>
+        {/* Conditional rendering: Empty State or Staff Grid */}
+        {staff.length === 0 ? (
+          <TeamEmptyState outletId={outletId} organizationId={outlet?.organization_id} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {staff.map((member) => {
+              const shift = getShiftStatus(member.shift_status, member.shift_started_at);
+              const ringColor = roleRingColors[member.role] || roleRingColors.default;
+              const lastActive = formatLastActive(member.last_active_at);
+              return (
+                <div
+                  key={member.id}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+                  onClick={() => {
+                    setSelectedStaff(member);
+                    setDrawerOpen(true);
+                  }}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`rounded-full ${ringColor}`}>
+                          <UserCircleIcon className="h-10 w-10 text-gray-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-lg">{member.full_name}</h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                              {member.role}
+                            </span>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${shift.bg}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${shift.dot}`}></span>
+                              {shift.text}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <Menu as="div" className="relative" onClick={(e) => e.stopPropagation()}>
+                        <Menu.Button className="p-1 rounded-full hover:bg-gray-100">
+                          <EllipsisVerticalIcon className="h-5 w-5 text-gray-400" />
+                        </Menu.Button>
+                        <Transition
+                          enter="transition duration-100 ease-out"
+                          enterFrom="transform scale-95 opacity-0"
+                          enterTo="transform scale-100 opacity-1"
+                          leave="transition duration-75 ease-in"
+                          leaveFrom="transform scale-100 opacity-1"
+                          leaveTo="transform scale-95 opacity-0"
+                        >
+                          <Menu.Items className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
+                                  View Details
+                                </button>
+                              )}
+                            </Menu.Item>
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
+                                  Shift History
+                                </button>
+                              )}
+                            </Menu.Item>
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
+                                  Performance
+                                </button>
+                              )}
+                            </Menu.Item>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-red-600`}>
+                                  Force Logout
+                                </button>
+                              )}
+                            </Menu.Item>
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-red-600`}>
+                                  Reset PIN
+                                </button>
+                              )}
+                            </Menu.Item>
+                          </Menu.Items>
+                        </Transition>
+                      </Menu>
                     </div>
-                    <Menu as="div" className="relative" onClick={(e) => e.stopPropagation()}>
-                      <Menu.Button className="p-1 rounded-full hover:bg-gray-100">
-                        <EllipsisVerticalIcon className="h-5 w-5 text-gray-400" />
-                      </Menu.Button>
-                      <Transition
-                        enter="transition duration-100 ease-out"
-                        enterFrom="transform scale-95 opacity-0"
-                        enterTo="transform scale-100 opacity-1"
-                        leave="transition duration-75 ease-in"
-                        leaveFrom="transform scale-100 opacity-1"
-                        leaveTo="transform scale-95 opacity-0"
-                      >
-                        <Menu.Items className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
-                                View Details
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
-                                Shift History
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>
-                                Performance
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <div className="border-t border-gray-100 my-1"></div>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-red-600`}>
-                                Force Logout
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-red-600`}>
-                                Reset PIN
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </Menu.Items>
-                      </Transition>
-                    </Menu>
-                  </div>
 
-                  {/* Metrics Grid */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
-                      <div className="text-xl font-bold text-gray-800">{member.orders_today}</div>
-                      <div className="text-[11px] text-gray-500 uppercase tracking-wide">Orders</div>
-                    </div>
-                    <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
-                      <div className="text-xl font-bold text-gray-800">₹{member.settlements_today?.toLocaleString() || 0}</div>
-                      <div className="text-[11px] text-gray-500 uppercase tracking-wide">Settlements</div>
-                    </div>
-                    <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
-                      <div className="text-xl font-bold text-gray-800">{Number(member.avg_closure_minutes).toFixed(1)}</div>
-                      <div className="text-[11px] text-gray-500 uppercase tracking-wide">Avg Closure</div>
-                    </div>
-                    <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className={`w-2 h-2 rounded-full ${lastActive.dot}`}></span>
-                        <div className="text-sm font-semibold text-gray-800">{lastActive.text}</div>
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
+                        <div className="text-xl font-bold text-gray-800">{member.orders_today}</div>
+                        <div className="text-[11px] text-gray-500 uppercase tracking-wide">Orders</div>
                       </div>
-                      <div className="text-[11px] text-gray-500 uppercase tracking-wide mt-1">Last Activity</div>
+                      <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
+                        <div className="text-xl font-bold text-gray-800">₹{member.settlements_today?.toLocaleString() || 0}</div>
+                        <div className="text-[11px] text-gray-500 uppercase tracking-wide">Settlements</div>
+                      </div>
+                      <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
+                        <div className="text-xl font-bold text-gray-800">{Number(member.avg_closure_minutes).toFixed(1)}</div>
+                        <div className="text-[11px] text-gray-500 uppercase tracking-wide">Avg Closure</div>
+                      </div>
+                      <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-100">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className={`w-2 h-2 rounded-full ${lastActive.dot}`}></span>
+                          <div className="text-sm font-semibold text-gray-800">{lastActive.text}</div>
+                        </div>
+                        <div className="text-[11px] text-gray-500 uppercase tracking-wide mt-1">Last Activity</div>
+                      </div>
                     </div>
+
+                    {member.last_handover && (
+                      <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-1">
+                        <ArrowPathIcon className="h-3 w-3" />
+                        <span>Handover: {member.last_handover.from_name} → {member.last_handover.to_name}</span>
+                        <span className="text-gray-400">• {new Date(member.last_handover.created_at).toLocaleTimeString()}</span>
+                      </div>
+                    )}
                   </div>
-
-                  {member.last_handover && (
-                    <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-1">
-                      <ArrowPathIcon className="h-3 w-3" />
-                      <span>Handover: {member.last_handover.from_name} → {member.last_handover.to_name}</span>
-                      <span className="text-gray-400">• {new Date(member.last_handover.created_at).toLocaleTimeString()}</span>
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {staff.length === 0 && (
-          <div className="text-center text-gray-400 py-12">No staff found for this outlet</div>
+              );
+            })}
+          </div>
         )}
       </div>
 

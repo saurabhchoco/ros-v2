@@ -79,83 +79,50 @@ async function listCategories(
   return result.rows;
 }
 
-async function createMenuItem(
-  data
-) {
-
-  const id =
-    generateId('mnu');
-
-  const result =
-    await pool.query(
-
-      `
-      INSERT INTO menu_items (
-        id,
-        organization_id,
-        outlet_id,
-        category_id,
-        item_code,
-        name,
-        description,
-        base_price,
-        tax_percentage,
-        is_veg
-      )
-      VALUES (
-        $1,$2,$3,$4,$5,
-        $6,$7,$8,$9,$10
-      )
-      RETURNING *
-      `,
-      [
-        id,
-        data.organizationId,
-        data.outletId,
-        data.categoryId,
-        data.itemCode || null,
-        data.name,
-        data.description || null,
-        data.basePrice,
-        data.taxPercentage || 0,
-        data.isVeg || false
-      ]
-
-    );
-
-  return result.rows[0];
-}
-
-async function listMenuItems(
-  organizationId,
-  outletId,
-  categoryId = null
-) {
+// listMenuItems – no is_deleted, handles categoryId='all'
+async function listMenuItems(organizationId, outletId, categoryId = null) {
   let query = `
-    SELECT *
-    FROM menu_items
-    WHERE
-      organization_id = $1
-    AND
-      outlet_id = $2
-    AND
-      is_available = true
+    SELECT mi.*, mc.name as category_name
+    FROM menu_items mi
+    LEFT JOIN menu_categories mc ON mi.category_id = mc.id
+    WHERE mi.organization_id = $1 AND mi.outlet_id = $2
   `;
-
   const params = [organizationId, outletId];
-
-  if (categoryId) {
-    query += ` AND category_id = $3`;
+  
+  // Only filter by category if a specific ID is provided (not 'all')
+  if (categoryId && categoryId !== 'all') {
+    query += ` AND mi.category_id = $3`;
     params.push(categoryId);
   }
-
-  query += ` ORDER BY name ASC`;
-
-  const result = await pool.query(
-    query,
-    params
-  );
+  
+  query += ` ORDER BY mi.name ASC`;
+  const result = await pool.query(query, params);
   return result.rows;
+}
+
+// createMenuItem – map camelCase frontend fields to snake_case columns
+async function createMenuItem(data, userContext) {
+  const {
+    name, basePrice, description, isVeg, taxPercentage, isAvailable,
+    categoryId, organizationId, outletId, itemCode, status
+  } = data;
+  const id = generateId('itm');
+  const query = `
+    INSERT INTO menu_items (
+      id, name, base_price, description, is_veg, tax_percentage,
+      is_available, category_id, organization_id, outlet_id,
+      item_code, status, item_type
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    RETURNING *
+  `;
+  const values = [
+    id, name, basePrice, description, isVeg, taxPercentage || 0,
+    isAvailable !== undefined ? isAvailable : true,
+    categoryId, organizationId, outletId,
+    itemCode || null, status || 'active', 'SIMPLE'
+  ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
 }
 
 async function importMenuCSV(
