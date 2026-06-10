@@ -89,6 +89,19 @@ async function getDashboardSummary(request, reply) {
   return reply.send({ success: true, data: summary });
 }
 
+async function getDashboardByDateRange(request, reply) {
+  const { startDate, endDate } = request.query;
+  if (!startDate || !endDate) {
+    return reply.status(400).send({ success: false, message: 'startDate and endDate are required' });
+  }
+  const { organization_id, outlet_id } = request.userContext;
+  if (!outlet_id) {
+    return reply.status(400).send({ success: false, message: 'No outlet assigned' });
+  }
+  const data = await reportService.getDashboardByDateRange(organization_id, outlet_id, startDate, endDate);
+  return reply.send({ success: true, data });
+}
+
 module.exports = {
   getSummary,
   getByDateRange,
@@ -98,5 +111,6 @@ module.exports = {
   getRevenueTrend,
   getOrderStatusDistribution,
   getOutletComparison,
-  getDashboardSummary
+  getDashboardSummary,
+  getDashboardByDateRange
 };

@@ -403,6 +403,100 @@ if (!outletId) {
   };
 }
 
+// Add this function to your existing report.service.js
+async function getDashboardByDateRange(organizationId, outletId, startDate, endDate) {
+  // Convert endDate to the next day to make the range inclusive
+  const endDateNext = new Date(endDate);
+  endDateNext.setDate(endDateNext.getDate() + 1);
+  const endDateNextStr = endDateNext.toISOString().split('T')[0];
+
+  // 1. Main metrics (revenue, orders, aov, completed, cancelled, settlementPending)
+  const mainQuery = `
+    SELECT
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS revenue,
+      COUNT(*) AS orders,
+      COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) AS completed,
+      COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) AS cancelled,
+      COUNT(CASE WHEN order_status = 'COMPLETED' AND payment_status != 'PAID' THEN 1 END) AS settlement_pending,
+      COALESCE(ROUND(AVG(CASE WHEN payment_status = 'PAID' THEN grand_total END), 2), 0) AS aov
+    FROM orders
+    WHERE organization_id = $1
+      AND outlet_id = $2
+      AND created_at >= $3::date AND created_at < $4::date
+  `;
+  const mainRes = await pool.query(mainQuery, [organizationId, outletId, startDate, endDateNextStr]);
+  const main = mainRes.rows[0];
+
+  // 2. Payment breakdown (only settled orders)
+  const paymentQuery = `
+    SELECT payment_method, COALESCE(SUM(grand_total), 0) AS total
+    FROM orders
+    WHERE organization_id = $1
+      AND outlet_id = $2
+      AND payment_status = 'PAID'
+      AND created_at >= $3::date AND created_at < $4::date
+    GROUP BY payment_method
+  `;
+  const paymentRes = await pool.query(paymentQuery, [organizationId, outletId, startDate, endDateNextStr]);
+  const paymentBreakdown = {};
+  paymentRes.rows.forEach(row => {
+    paymentBreakdown[row.payment_method] = parseFloat(row.total);
+  });
+
+  // 3. Order sources
+  const sourceQuery = `
+    SELECT order_source, COUNT(*) AS count
+    FROM orders
+    WHERE organization_id = $1
+      AND outlet_id = $2
+      AND created_at >= $3::date AND created_at < $4::date
+    GROUP BY order_source
+  `;
+  const sourceRes = await pool.query(sourceQuery, [organizationId, outletId, startDate, endDateNextStr]);
+  const orderSources = {};
+  sourceRes.rows.forEach(row => {
+    orderSources[row.order_source] = parseInt(row.count);
+  });
+
+  // 4. Top 5 items (by quantity)
+  const topItemsQuery = `
+    SELECT oi.item_name, SUM(oi.quantity) AS quantity, SUM(oi.line_total) AS revenue
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.organization_id = $1
+      AND o.outlet_id = $2
+      AND o.created_at >= $3::date AND o.created_at < $4::date
+    GROUP BY oi.item_name
+    ORDER BY quantity DESC
+    LIMIT 5
+  `;
+  const topItemsRes = await pool.query(topItemsQuery, [organizationId, outletId, startDate, endDateNextStr]);
+
+  // 5. Operational status (we already have completed, cancelled, settlementPending from main query)
+  const operationalStatus = {
+    completed: parseInt(main.completed),
+    cancelled: parseInt(main.cancelled),
+    settlementPending: parseInt(main.settlement_pending)
+  };
+
+  return {
+    revenue: parseFloat(main.revenue),
+    orders: parseInt(main.orders),
+    aov: parseFloat(main.aov),
+    completed: parseInt(main.completed),
+    cancelled: parseInt(main.cancelled),
+    settlementPending: parseInt(main.settlement_pending),
+    paymentBreakdown,
+    orderSources,
+    topItems: topItemsRes.rows.map(row => ({
+      name: row.item_name,
+      quantity: parseInt(row.quantity),
+      revenue: parseFloat(row.revenue)
+    })),
+    operationalStatus
+  };
+}
+
 module.exports = {
   getSummaryReport,
   getDateRangeReport,
@@ -412,5 +506,6 @@ module.exports = {
   getRevenueTrend,
   getOrderStatusDistribution,
   getOutletComparison,
-  getDashboardSummary
+  getDashboardSummary,
+  getDashboardByDateRange
 };

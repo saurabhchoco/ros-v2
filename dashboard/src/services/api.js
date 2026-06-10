@@ -288,7 +288,7 @@ export const apiService = {
   updateCategory: async (categoryId, name) => {
     return axios.put(`${API_URL}/menu/categories/${categoryId}`, { name }, { headers: await getAuthHeaders() });
   },
-  
+
   deleteCategory: async (categoryId, moveToCategoryId) => {
     return axios.delete(`${API_URL}/menu/categories/${categoryId}`, {
       data: { moveToCategoryId },
@@ -298,6 +298,13 @@ export const apiService = {
 
   mergeCategories: async (sourceId, targetId) => {
     return axios.post(`${API_URL}/menu/categories/merge`, { sourceCategoryId: sourceId, targetCategoryId: targetId }, { headers: await getAuthHeaders() });
+  },
+
+  getReportDashboardRange: async (startDate, endDate) => {
+    return axios.get(`${API_URL}/reports/dashboard-range`, {
+      params: { startDate, endDate },
+      headers: await getAuthHeaders()
+    });
   },
 
 };

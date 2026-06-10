@@ -43,14 +43,14 @@ async function reportRoutes(app) {
   );
 
   app.get(
-  '/api/v1/kitchen/stats',
-  {
-    preHandler: [
-      authMiddleware,
-      userContextMiddleware,
-      roleMiddleware(['OUTLET_MANAGER', 'KITCHEN', 'ARM'])
-    ]
-  },
+    '/api/v1/kitchen/stats',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['OUTLET_MANAGER', 'KITCHEN', 'ARM'])
+      ]
+    },
     reportController.getKitchenStats
   );
 
@@ -69,6 +69,14 @@ async function reportRoutes(app) {
   app.get('/api/v1/dashboard/summary', {
     preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['OUTLET_MANAGER', 'BRAND_OWNER', 'ARM'])]
   }, reportController.getDashboardSummary);
+
+  app.get(
+    '/api/v1/reports/dashboard-range',
+    {
+      preHandler: [authMiddleware, userContextMiddleware, roleMiddleware(['OUTLET_MANAGER', 'ARM', 'BRAND_OWNER'])]
+    },
+    reportController.getDashboardByDateRange
+  );
 
 }
 
