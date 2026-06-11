@@ -6,31 +6,25 @@ import OrdersList from '../pages/OrdersList';
 import Reports from '../pages/Reports';
 import Captain from '../pages/Captain';
 import ErrorPage from '../pages/ErrorPage';
-
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import CreateBrand from '../pages/admin/CreateBrand';
 import CreateOutlet from '../pages/admin/CreateOutlet';
 import CreateManager from '../pages/admin/CreateManager';
 import ProtectedRoute from '../components/ProtectedRoute';
-
 import OutletsList from '../pages/admin/OutletsList';
-
 import BrandOwnerDashboard from '../pages/owner/BrandOwnerDashboard';
 import CreateOwnerOutlet from '../pages/owner/CreateOutlet';
 import MenuManagement from '../pages/owner/MenuManagement';
-// import AssignManagers from '../pages/owner/AssignManagers';
-
 import DashboardRedirect from '../components/DashboardRedirect';
-
 import BrandAnalytics from '../pages/owner/BrandAnalytics';
 import OutletAnalytics from '../pages/owner/OutletAnalytics';
-
 import PublicOrder from '../pages/PublicOrder';
 import VendorScreen from '../pages/VendorScreen';
-
 import InventoryList from '../pages/InventoryList';
 import ShiftHandover from '../pages/ShiftHandover';
 import OutletStaff from '../pages/owner/OutletStaff';
+import NotFoundPage from '../pages/NotFoundPage';
+import AccessDeniedPage from '../pages/AccessDeniedPage';
 
 export const router = createBrowserRouter([
   {
@@ -38,18 +32,22 @@ export const router = createBrowserRouter([
     element: <LoginPage />
   },
   {
+    path: '/access-denied',
+    element: <AccessDeniedPage />
+  },
+  {
     path: '/',
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
       { index: true, element: <DashboardRedirect /> },
-      // Public routes (no layout)
+      // Public routes
       { path: 'order/:outletId', element: <PublicOrder /> },
       { path: 'vendor/:outletId', element: <VendorScreen /> },
       {
         path: 'kds',
         element: (
-          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'ARM']}>
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'KITCHEN', 'ARM', 'CAPTAIN']}>
             <KDSScreen />
           </ProtectedRoute>
         )
@@ -57,7 +55,7 @@ export const router = createBrowserRouter([
       {
         path: 'orders',
         element: (
-          <ProtectedRoute roles={['OUTLET_MANAGER', 'ARM', 'GSA', 'CASHIER']}>
+          <ProtectedRoute roles={['OUTLET_MANAGER', 'ARM', 'CAPTAIN', 'CASHIER']}>
             <OrdersList />
           </ProtectedRoute>
         )
@@ -73,13 +71,12 @@ export const router = createBrowserRouter([
       {
         path: 'captain',
         element: (
-          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM', 'CASHIER']}>
+          <ProtectedRoute roles={['CAPTAIN', 'OUTLET_MANAGER', 'GSA', 'ARM']}>
             <Captain />
           </ProtectedRoute>
         )
       },
-
-       // Admin routes — SUPER_ADMIN only
+      // Admin routes
       {
         path: 'admin',
         element: (
@@ -152,14 +149,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
-      // {
-      //   path: 'owner/managers',
-      //   element: (
-      //     <ProtectedRoute roles={['BRAND_OWNER']}>
-      //       <AssignManagers />
-      //     </ProtectedRoute>
-      //   )
-      // },
       {
         path: 'owner/managers/create',
         element: (
@@ -184,8 +173,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
-
-      // Inside the protected routes section (for BRAND_OWNER and OUTLET_MANAGER)
       {
         path: 'inventory',
         element: (
@@ -194,7 +181,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
-
       {
         path: 'shift-handover',
         element: (
@@ -203,7 +189,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
-
       {
         path: 'owner/managers',
         element: (
@@ -211,6 +196,10 @@ export const router = createBrowserRouter([
             <OutletStaff />
           </ProtectedRoute>
         )
+      },
+      {
+        path: '*',
+        element: <NotFoundPage />
       }
     ]
   }

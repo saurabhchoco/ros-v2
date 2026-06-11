@@ -48,7 +48,7 @@ async function reportRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
-        roleMiddleware(['OUTLET_MANAGER', 'KITCHEN', 'ARM'])
+        roleMiddleware(['OUTLET_MANAGER', 'KITCHEN', 'ARM', 'CAPTAIN'])
       ]
     },
     reportController.getKitchenStats

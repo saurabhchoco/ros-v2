@@ -35,35 +35,50 @@ async function createOrder(request, reply) {
   });
 }
 
-async function updateOrderStatus(
-  request,
-  reply
-) {
-
+async function updateOrderStatus(request, reply) {
   const { orderId } = request.params;
   const { status, cancellationReason } = request.body;
 
   if (!status) {
-    return reply.status(400).send({
-      success: false,
-      message: 'status is required in request body'
-    });
+    return reply.status(400).send({ success: false, message: 'status is required' });
   }
 
-  const order =
-    await orderService.updateOrderStatus(
-      orderId,
-      status,
-      request.userContext,
-      cancellationReason
-    );
+  // Extract user info
+  const firebaseUid = request.user?.user_id || request.user?.uid;
+  const userRole = request.user?.role;
+  const outletId = request.userContext?.outlet_id;
+  const internalUserId = request.userContext?.id;   // internal user ID for shift table
+
+  if (!firebaseUid || !userRole || !internalUserId) {
+    return reply.status(401).send({ success: false, message: 'User not authenticated' });
+  }
+
+  // Roles that require an active shift
+  const shiftRoles = ['CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN'];
+  if (shiftRoles.includes(userRole)) {
+    const activeShift = await getActiveShift(outletId, internalUserId);
+    if (!activeShift) {
+      return reply.status(403).send({
+        success: false,
+        message: 'Active shift required',
+        error: 'You must start a shift before updating order status.'
+      });
+    }
+  }
+
+  // Proceed with status update
+  const order = await orderService.updateOrderStatus(
+    orderId,
+    status,
+    request.userContext,
+    cancellationReason
+  );
 
   return reply.send({
     success: true,
     message: `Order status updated to ${status}`,
     data: order
   });
-
 }
 
 async function listOrders(
@@ -198,7 +213,7 @@ async function createPublicOrder(request, reply) {
         [generateId('itm'), orderId, item.menuItemId, item.itemName, item.quantity, item.unitPrice, item.lineTotal]
       );
     }
-console.log('Calling inventory deduction for order', orderId);
+    console.log('Calling inventory deduction for order', orderId);
     // ***** INVENTORY DEDUCTION *****
     await inventoryService.deductIngredientsForOrderItems(
       validatedItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
@@ -247,15 +262,51 @@ console.log('Calling inventory deduction for order', orderId);
 async function settleOrder(request, reply) {
   const { orderId } = request.params;
   const { paymentMethod } = request.body;
+
   if (!paymentMethod) {
-    return reply.status(400).send({ success: false, message: 'paymentMethod required' });
+    return reply.status(400).send({
+      success: false,
+      message: 'Payment method is required'
+    });
   }
+
+  // Check role permission for settlement
+  const userRole = request.user?.role;
+  const allowedRoles = ['CASHIER', 'ARM', 'OUTLET_MANAGER'];
+  if (!allowedRoles.includes(userRole)) {
+    return reply.status(403).send({
+      success: false,
+      message: 'You do not have permission to settle orders. Only CASHIER, ARM, or OUTLET_MANAGER can perform this action.'
+    });
+  }
+
   try {
     const order = await orderService.settleOrder(orderId, paymentMethod, request.userContext.id);
-    return reply.send({ success: true, data: order });
+    return reply.send({
+      success: true,
+      message: 'Order settled successfully',
+      data: order
+    });
   } catch (err) {
-    return reply.status(400).send({ success: false, message: err.message });
+    // Handle business logic errors (e.g., order already settled, order not found)
+    return reply.status(400).send({
+      success: false,
+      message: err.message || 'Failed to settle order'
+    });
   }
+}
+
+// Helper function to check active shift
+async function getActiveShift(outletId, userId) {
+  console.log('[getActiveShift] Checking active shift for:', { outletId, userId });
+  const result = await pool.query(
+    `SELECT id, status, started_at FROM shift_sessions 
+     WHERE user_id = $1 AND outlet_id = $2 AND status = 'ACTIVE'
+     LIMIT 1`,
+    [userId, outletId]
+  );
+  console.log('[getActiveShift] Query result:', result.rows);
+  return result.rows[0];
 }
 
 module.exports = {
@@ -264,5 +315,6 @@ module.exports = {
   listOrders,
   getOrderById,
   createPublicOrder,
-  settleOrder
+  settleOrder,
+  getActiveShift
 };

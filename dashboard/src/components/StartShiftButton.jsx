@@ -3,36 +3,21 @@ import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 
-export default function StartShiftButton({ initialActiveShift }) {
+export default function StartShiftButton({ initialActiveShift, showWarning, isLoading }) {
   const outlet = useAuthStore(s => s.outlet);
-  const [hasActiveShift, setHasActiveShift] = useState(!!initialActiveShift);
-  const [shiftStartTime, setShiftStartTime] = useState(
-    initialActiveShift?.started_at ? new Date(initialActiveShift.started_at) : null
-  );
-  const [elapsed, setElapsed] = useState('00:00:00');
   const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState('00:00:00');
 
   const shiftRoles = ['CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN'];
   const canStartShift = outlet && shiftRoles.includes(outlet.role);
 
-  // Update state when prop changes (e.g., after handover page reload)
+  // Timer effect – only runs when a shift is active
   useEffect(() => {
-    if (initialActiveShift) {
-      setHasActiveShift(true);
-      setShiftStartTime(new Date(initialActiveShift.started_at));
-    } else {
-      setHasActiveShift(false);
-      setShiftStartTime(null);
-      setElapsed('00:00:00');
-    }
-  }, [initialActiveShift]);
-
-  // Live timer (ticks every second)
-  useEffect(() => {
-    if (!hasActiveShift || !shiftStartTime) return;
+    if (!initialActiveShift || !initialActiveShift.started_at) return;
+    const startTime = new Date(initialActiveShift.started_at);
     const updateTimer = () => {
       const now = new Date();
-      const diffMs = now - shiftStartTime;
+      const diffMs = now - startTime;
       const totalSeconds = Math.floor(diffMs / 1000);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -42,7 +27,7 @@ export default function StartShiftButton({ initialActiveShift }) {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [hasActiveShift, shiftStartTime]);
+  }, [initialActiveShift]);
 
   const handleStart = async () => {
     if (!outlet?.outletId) return;
@@ -57,7 +42,9 @@ export default function StartShiftButton({ initialActiveShift }) {
       window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to start shift');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEnd = async () => {
@@ -68,30 +55,59 @@ export default function StartShiftButton({ initialActiveShift }) {
       window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to end shift');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!canStartShift) return null;
 
-  if (hasActiveShift) {
+  // Show a disabled loading button while shift status is being fetched
+  if (isLoading) {
     return (
       <button
-        onClick={handleEnd}
-        disabled={loading}
-        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+        disabled
+        className="px-3 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2 cursor-wait"
       >
-        {loading ? 'Ending...' : `Stop Shift (${elapsed})`}
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+        Loading...
       </button>
     );
   }
 
+  if (initialActiveShift) {
+    return (
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleEnd}
+          disabled={loading}
+          className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+        >
+          {loading ? 'Ending...' : `Stop Shift (${elapsed})`}
+        </button>
+        {showWarning && (
+          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+            ⚠️ Start shift to take and update order status.
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <button
-      onClick={handleStart}
-      disabled={loading}
-      className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium"
-    >
-      {loading ? 'Starting...' : 'Start Shift'}
-    </button>
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleStart}
+        disabled={loading}
+        className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium"
+      >
+        {loading ? 'Starting...' : 'Start Shift'}
+      </button>
+      {showWarning && (
+        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+          ⚠️ Start shift to take orders and update order status.
+        </span>
+      )}
+    </div>
   );
 }

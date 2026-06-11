@@ -1,8 +1,8 @@
 const orderController =
   require('./order.controller');
-const syncClaims = 
+const syncClaims =
   require('../../middleware/syncClaims');
-const roleMiddleware = 
+const roleMiddleware =
   require('../../middleware/roleMiddleware');
 const authMiddleware =
   require('../../middleware/authMiddleware');
@@ -35,7 +35,7 @@ async function orderRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
-        roleMiddleware(['OUTLET_MANAGER', 'ARM', 'GSA', 'CASHIER'])
+        roleMiddleware(['OUTLET_MANAGER', 'CAPTAIN', 'GSA', 'CASHIER'])
       ]
     },
     orderController.listOrders
@@ -59,7 +59,7 @@ async function orderRoutes(app) {
         authMiddleware,
         syncClaims,
         userContextMiddleware,
-        roleMiddleware(['KITCHEN', 'OUTLET_MANAGER', 'ARM', 'GSA']),
+        roleMiddleware(['KITCHEN', 'OUTLET_MANAGER', 'ARM', 'CAPTAIN']),
         activeShiftRequired
       ]
     },
@@ -70,7 +70,10 @@ async function orderRoutes(app) {
     preHandler: [
       authMiddleware,
       userContextMiddleware,
-      roleMiddleware(['CASHIER', 'ARM', 'OUTLET_MANAGER']),
+      roleMiddleware(
+        ['CASHIER', 'ARM', 'OUTLET_MANAGER'],
+        'You do not have permission to settle orders. Only CASHIER, ARM, or OUTLET MANAGER can perform this action.'
+      ),
       activeShiftRequired
     ]
   }, orderController.settleOrder);

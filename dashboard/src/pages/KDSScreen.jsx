@@ -51,14 +51,15 @@ export default function KDSScreen() {
   };
 
   const handleCancel = async (orderId, reason) => {
-    try {
-      await apiService.updateOrderStatus(orderId, 'CANCELLED', reason);
-      toast.success('Order cancelled');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to cancel order');
-    }
-  };
-
+  try {
+    await apiService.updateOrderStatus(orderId, 'CANCELLED', reason);
+    toast.success('Order cancelled');
+    // Stats will refresh via the listener
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update order status';
+    toast.error(errorMessage);
+  }
+};
   // Subscribe to real‑time orders
   useEffect(() => {
     if (!outlet?.organizationId || !outlet?.outletId) {
@@ -86,14 +87,15 @@ export default function KDSScreen() {
     return () => unsubscribe();
   }, [outlet, setOrders]);
 
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      await apiService.updateOrderStatus(orderId, newStatus);
-      // Stats will refresh via the listener
-    } catch (error) {
-      alert('Failed to update order status');
-    }
-  };
+const handleStatusChange = async (orderId, newStatus) => {
+  try {
+    await apiService.updateOrderStatus(orderId, newStatus);
+    // Stats will refresh via the listener
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update order status';
+    toast.error(errorMessage);
+  }
+};
 
   const grouped = useMemo(() => ({
     NEW: orders.filter(o => o.orderStatus === 'NEW'),

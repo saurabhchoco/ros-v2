@@ -5,8 +5,8 @@ export default function ProtectedRoute({
   children,
   roles = []
 }) {
-  const { user, outlet, isLoading } =
-    useAuthStore();
+  const { user, outlet, isLoading } = useAuthStore();
+  const userRole = outlet?.role;
 
   if (isLoading) {
     return (
@@ -20,6 +20,10 @@ export default function ProtectedRoute({
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (roles.length > 0 && !roles.includes(userRole)) {
+    return <Navigate to="/access-denied" replace />;
   }
 
   if (

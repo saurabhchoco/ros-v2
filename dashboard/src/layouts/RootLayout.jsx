@@ -39,7 +39,8 @@ export default function RootLayout() {
 
   const role = outlet?.role;
 
-
+  const requiresShift = outlet && shiftRoles.includes(outlet.role);
+  const showShiftWarning = requiresShift && !activeShift;
 
 
   const navItems = [
@@ -70,11 +71,11 @@ export default function RootLayout() {
 
     ...(role === 'GSA'
       ? [
-        {
-          path: '/orders',
-          label: 'Orders',
-          icon: ClipboardList
-        },
+        // {
+        //   path: '/orders',
+        //   label: 'Orders',
+        //   icon: ClipboardList
+        // },
         {
           path: '/captain',
           label: 'Captain',
@@ -131,7 +132,11 @@ export default function RootLayout() {
           label: 'Captain',
           icon: UserRound
         },
-        { path: '/owner/menu', label: 'Menu', icon: Menu }
+        {
+          path: '/owner/menu',
+          label: 'Menu',
+          icon: Menu
+        }
       ]
       : []),
 
@@ -141,6 +146,16 @@ export default function RootLayout() {
           path: '/captain',
           label: 'Captain',
           icon: UserRound
+        },
+        {
+          path: '/kds',
+          label: 'Kitchen',
+          icon: ChefHat
+        },
+        {
+          path: '/orders',
+          label: 'Orders',
+          icon: ClipboardList
         }
       ]
       : []),
@@ -192,17 +207,26 @@ export default function RootLayout() {
   }, [user, setUser]);
 
   // Shift check effect (unchanged)
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await apiService.getActiveShift();
-        setActiveShift(res.data.activeShift);
-      } catch (err) { console.error(err); }
-      finally { setCheckingShift(false); }
-    };
-    if (outlet && shiftRoles.includes(outlet.role)) check();
-    else setCheckingShift(false);
-  }, [user, outlet]);
+// Shift check effect (fixed)
+useEffect(() => {
+  const check = async () => {
+    try {
+      const res = await apiService.getActiveShift();
+      setActiveShift(res.data.activeShift);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingShift(false);
+    }
+  };
+
+  if (outlet && shiftRoles.includes(outlet.role)) {
+    setCheckingShift(true);   // ✅ Show loading while fetching shift
+    check();
+  } else {
+    setCheckingShift(false);
+  }
+}, [user, outlet]);
 
   const isActive = (path) =>
     location.pathname === path ||
@@ -239,7 +263,11 @@ export default function RootLayout() {
             </div>
           ) : null}
 
-          {!checkingShift && <StartShiftButton initialActiveShift={activeShift} />}
+          <StartShiftButton
+            initialActiveShift={activeShift}
+            showWarning={showShiftWarning}
+            isLoading={checkingShift}
+          />
 
           <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition">
             <LogOut className="h-4 w-4" />

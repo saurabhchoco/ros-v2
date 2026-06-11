@@ -79,7 +79,19 @@ export default function Captain() {
 
   // --- Local state ---
   const [activeCategory, setActiveCategory] = useState(null);
-  const [cart, setCart] = useState([]);
+  // const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('captain_cart');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved cart', e);
+        return [];
+      }
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
@@ -122,6 +134,11 @@ export default function Captain() {
     if (!items) return [];
     return items.filter(item => item.status !== 'hidden' && item.status !== 'draft');
   };
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('captain_cart', JSON.stringify(cart));
+  }, [cart]);
 
   useEffect(() => {
     tableNumberRef.current = tableNumber;
@@ -480,7 +497,17 @@ export default function Captain() {
 
         {/* Cart items */}
         <div className="border-t pt-4">
-          <h3 className="font-medium text-gray-800 mb-2">Items</h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-medium text-gray-800">Items</h3>
+            {cart.length > 0 && (
+              <button
+                onClick={() => setCart([])}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                Clear Cart
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             {cart.length === 0 ? (
               <div className="text-center text-gray-400 py-4">Cart is empty</div>
@@ -591,7 +618,8 @@ export default function Captain() {
           {/* FIX 1: Place order button with correct total */}
           <button
             onClick={handlePlaceOrder}
-            disabled={placing}
+            disabled={placing || !canAddToCart}
+            title={!canAddToCart ? "Start shift to place order" : ""}
             className="w-full py-3 text-lg bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {placing ? (
