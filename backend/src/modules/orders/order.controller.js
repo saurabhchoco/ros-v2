@@ -281,7 +281,7 @@ async function settleOrder(request, reply) {
   }
 
   try {
-    const order = await orderService.settleOrder(orderId, paymentMethod, request.userContext.id);
+    const order = await orderService.settleOrder(orderId, paymentMethod, request.userContext.id, request.userContext.organization_id);
     return reply.send({
       success: true,
       message: 'Order settled successfully',

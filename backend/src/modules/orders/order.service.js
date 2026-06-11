@@ -238,10 +238,19 @@ async function updateOrderStatus(orderId, status, userContext, cancellationReaso
   `;
   const params = [status, orderId, userContext.organization_id];
 
-  if (status === 'CANCELLED') {
-    query += `, cancelled_at = NOW(), cancellation_reason = $4`;
-    params.push(cancellationReason || null);
-  }
+if (status === 'CANCELLED') {
+  query = `
+    UPDATE orders 
+    SET order_status = $1, 
+        updated_at = NOW(), 
+        cancelled_at = NOW(), 
+        cancellation_reason = $2,
+        payment_status = 'NOT_APPLICABLE'
+    WHERE id = $3 AND organization_id = $4
+    RETURNING *
+  `;
+  params = [status, cancellationReason, orderId, organizationId];
+}
 
   query += ` WHERE id = $2 AND organization_id = $3 RETURNING *`;
 
@@ -409,7 +418,7 @@ async function generateToken(outletId) {
   }
 }
 
-async function settleOrder(orderId, paymentMethod, userId) {
+async function settleOrder(orderId, paymentMethod, userId, organizationId) { 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -418,11 +427,22 @@ async function settleOrder(orderId, paymentMethod, userId) {
        SET payment_status = 'PAID',
            payment_method = $1,
            updated_at = NOW()
-       WHERE id = $2 AND payment_status != 'PAID'
+       WHERE id = $2 
+         AND organization_id = $3
+         AND payment_status != 'PAID' 
+         AND order_status != 'CANCELLED'
        RETURNING *`,
-      [paymentMethod, orderId]
+      [paymentMethod, orderId, organizationId]
     );
     if (!result.rows[0]) {
+      // Check if order exists but is cancelled (within same org)
+      const check = await client.query(
+        `SELECT order_status FROM orders WHERE id = $1 AND organization_id = $2`,
+        [orderId, organizationId]
+      );
+      if (check.rows.length > 0 && check.rows[0].order_status === 'CANCELLED') {
+        throw new Error('Cannot settle a cancelled order');
+      }
       throw new Error('Order not found or already settled');
     }
     await createAuditLog({

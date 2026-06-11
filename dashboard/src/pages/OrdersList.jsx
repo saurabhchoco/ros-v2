@@ -362,7 +362,20 @@ export default function OrdersList() {
                   {selectedOrder.customer_name && <div className="flex justify-between"><span className="text-gray-500">Customer</span><span className="font-medium">{selectedOrder.customer_name}</span></div>}
                   {selectedOrder.order_source === 'DINE_IN' && selectedOrder.table_number && <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-medium">{selectedOrder.table_number}</span></div>}
                   <div className="flex justify-between"><span className="text-gray-500">Payment</span><span className="font-medium">{selectedOrder.payment_method || '-'}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Settlement</span><span className="font-medium">{selectedOrder.payment_status === 'PAID' ? 'Paid' : 'Pending'}</span></div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Settlement</span>
+                    <span className="font-medium">
+                      {selectedOrder.order_status === 'CANCELLED' ? (
+                        'N/A'
+                      ) : selectedOrder.payment_status === 'PAID' ? (
+                        'Paid'
+                      ) : (
+                        'Pending'
+                      )}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between"><span className="text-gray-500">Created</span><span className="font-medium">{formatTime(selectedOrder.created_at)}</span></div>
                 </div>
 

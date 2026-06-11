@@ -16,11 +16,13 @@ async function getSummaryReport(
       AVG(grand_total) as avg_order_value,
       COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) as completed_orders,
       COUNT(CASE WHEN order_status = 'NEW' THEN 1 END) as new_orders,
-      COUNT(CASE WHEN order_status = 'PREPARING' THEN 1 END) as preparing_orders
+      COUNT(CASE WHEN order_status = 'PREPARING' THEN 1 END) as preparing_orders,
+      COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) as cancelled_orders
     FROM orders
     WHERE organization_id = $1
     AND outlet_id = $2
     AND DATE(created_at) = $3::date
+      AND order_status != 'CANCELLED'
     `,
     [organizationId, outletId, dateStr]
   );
@@ -34,7 +36,8 @@ async function getSummaryReport(
     avgOrderValue: parseFloat(row.avg_order_value || 0),
     completedOrders: parseInt(row.completed_orders || 0),
     newOrders: parseInt(row.new_orders || 0),
-    preparingOrders: parseInt(row.preparing_orders || 0)
+    preparingOrders: parseInt(row.preparing_orders || 0),
+    cancelledOrders: parseInt(row.cancelled_orders || 0)  // optional
   };
 
 }
@@ -58,6 +61,7 @@ async function getDateRangeReport(
     WHERE organization_id = $1
     AND outlet_id = $2
     AND DATE(created_at) BETWEEN $3::date AND $4::date
+    AND order_status != 'CANCELLED'
     GROUP BY DATE(created_at)
     ORDER BY DATE(created_at) DESC
     `,
@@ -232,7 +236,7 @@ async function getRevenueTrend(organizationId) {
     ORDER BY date ASC
   `, [organizationId]);
   return result.rows.map(row => ({
-    date: row.date.toISOString().slice(0,10),
+    date: row.date.toISOString().slice(0, 10),
     revenue: parseFloat(row.revenue)
   }));
 }
@@ -361,31 +365,31 @@ async function getDashboardSummary(organizationId, outletId = null) {
   statusRes.rows.forEach(row => { orderStatusCounts[row.order_status] = parseInt(row.count); });
 
   // Cancellations today
-const cancelQuery = `
+  const cancelQuery = `
   SELECT COUNT(*) as total_cancelled
   FROM orders
   WHERE organization_id = $1 AND DATE(created_at) = $2 AND order_status = 'CANCELLED'
   ${outletId ? 'AND outlet_id = $3' : ''}
 `;
-const cancelRes = await pool.query(cancelQuery, params);
+  const cancelRes = await pool.query(cancelQuery, params);
 
-// Cancellations by outlet (only for brand owner, not for single outlet)
-let cancellationsByOutlet = [];
-if (!outletId) {
-  const cancelByOutletQuery = `
+  // Cancellations by outlet (only for brand owner, not for single outlet)
+  let cancellationsByOutlet = [];
+  if (!outletId) {
+    const cancelByOutletQuery = `
     SELECT o.id as outlet_id, o.name as outlet_name, COALESCE(COUNT(ord.id), 0) as cancelled_count
     FROM outlets o
     LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.order_status = 'CANCELLED' AND DATE(ord.created_at) = $1
     WHERE o.organization_id = $2
     GROUP BY o.id, o.name
   `;
-  const cancelByOutletRes = await pool.query(cancelByOutletQuery, [today, organizationId]);
-  cancellationsByOutlet = cancelByOutletRes.rows.map(row => ({
-    outletId: row.outlet_id,
-    outletName: row.outlet_name,
-    cancelledCount: parseInt(row.cancelled_count)
-  }));
-}
+    const cancelByOutletRes = await pool.query(cancelByOutletQuery, [today, organizationId]);
+    cancellationsByOutlet = cancelByOutletRes.rows.map(row => ({
+      outletId: row.outlet_id,
+      outletName: row.outlet_name,
+      cancelledCount: parseInt(row.cancelled_count)
+    }));
+  }
 
   return {
     totalOrders: parseInt(orderRes.rows[0].total_orders || 0),
