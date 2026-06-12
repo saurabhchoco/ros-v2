@@ -196,16 +196,13 @@ console.log('createOrder called with userId:', userId);
 }
 
 async function updateOrderStatus(orderId, status, userContext, cancellationReason = null) {
-  const validStatuses = [
-    'NEW', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'
-  ];
+  const validStatuses = ['NEW', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'];
   if (!validStatuses.includes(status)) {
     const error = new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     error.statusCode = 400;
     throw error;
   }
 
-  // Fetch current order to check current status and authorization
   const currentOrder = await pool.query(
     `SELECT order_status, organization_id FROM orders WHERE id = $1`,
     [orderId]
@@ -222,39 +219,34 @@ async function updateOrderStatus(orderId, status, userContext, cancellationReaso
   }
 
   const currentStatus = currentOrder.rows[0].order_status;
-
-  // Cancellation: only allowed from NEW or PREPARING
-  if (status === 'CANCELLED' && currentStatus !== 'NEW' && currentStatus !== 'PREPARING') {
+  if (status === 'CANCELLED' && !['NEW', 'PREPARING'].includes(currentStatus)) {
     const error = new Error('Order cannot be cancelled after preparation is complete');
     error.statusCode = 400;
     throw error;
   }
 
-  // Build dynamic UPDATE query
-  let query = `
-    UPDATE orders
-    SET order_status = $1,
-        updated_at = NOW()
-  `;
-  const params = [status, orderId, userContext.organization_id];
-
-if (status === 'CANCELLED') {
-  query = `
-    UPDATE orders 
-    SET order_status = $1, 
-        updated_at = NOW(), 
-        cancelled_at = NOW(), 
-        cancellation_reason = $2,
-        payment_status = 'NOT_APPLICABLE'
-    WHERE id = $3 AND organization_id = $4
-    RETURNING *
-  `;
-  params = [status, cancellationReason, orderId, organizationId];
-}
-
-  query += ` WHERE id = $2 AND organization_id = $3 RETURNING *`;
-
-  const result = await pool.query(query, params);
+  let result;
+  if (status === 'CANCELLED') {
+    result = await pool.query(
+      `UPDATE orders
+       SET order_status = $1,
+           updated_at = NOW(),
+           cancelled_at = NOW(),
+           cancellation_reason = $2,
+           payment_status = 'NOT_APPLICABLE'
+       WHERE id = $3 AND organization_id = $4
+       RETURNING *`,
+      [status, cancellationReason, orderId, userContext.organization_id]
+    );
+  } else {
+    result = await pool.query(
+      `UPDATE orders
+       SET order_status = $1, updated_at = NOW()
+       WHERE id = $2 AND organization_id = $3
+       RETURNING *`,
+      [status, orderId, userContext.organization_id]
+    );
+  }
 
   if (!result.rows[0]) {
     const error = new Error('Order not found');
@@ -262,7 +254,6 @@ if (status === 'CANCELLED') {
     throw error;
   }
 
-  // Update Firestore (KDS) and audit log
   await updateOrderInKDS(orderId, status);
   await createAuditLog({
     organizationId: userContext.organization_id,

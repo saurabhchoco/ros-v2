@@ -182,25 +182,24 @@ export default function OrdersList() {
     }
   }, [filteredOrders, selectedOrderId]);
 
-  const handleStatusUpdate = async (orderId, newStatus) => {
-    const order = allOrders.find(o => o.id === orderId);
-    if (newStatus === 'COMPLETED' && order && order.payment_status !== 'PAID') {
-      toast.error('Complete order only after payment settlement');
-      return;
-    }
-    setUpdatingOrderId(orderId);
-    try {
-      await apiService.updateOrderStatus(orderId, newStatus);
-      toast.success(`Order ${newStatus === 'CANCELLED' ? 'cancelled' : 'updated'}`);
-      fetchOrders();
-    } catch (err) {
-      // toast.error(err.response?.data?.message || 'Failed to update order');
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to update order status';
-      toast.error(errorMessage);
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
+const handleStatusUpdate = async (orderId, newStatus, cancellationReason = null) => {
+  const order = allOrders.find(o => o.id === orderId);
+  if (newStatus === 'COMPLETED' && order && order.payment_status !== 'PAID') {
+    toast.error('Complete order only after payment settlement');
+    return;
+  }
+  setUpdatingOrderId(orderId);
+  try {
+    await apiService.updateOrderStatus(orderId, newStatus, cancellationReason);
+    toast.success(`Order ${newStatus === 'CANCELLED' ? 'cancelled' : 'updated'}`);
+    fetchOrders();
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to update order status';
+    toast.error(errorMessage);
+  } finally {
+    setUpdatingOrderId(null);
+  }
+};
 
   const handleSettle = async (orderId, paymentMethod) => {
     try {
@@ -214,12 +213,10 @@ export default function OrdersList() {
     }
   };
 
-  const handleCancelWithReason = async (reason) => {
-    if (!orderToCancel) return;
-    await handleStatusUpdate(orderToCancel.id, 'CANCELLED');
-    setShowCancelModal(false);
-    setOrderToCancel(null);
-  };
+const handleCancelWithReason = async (reason) => {
+  if (!orderToCancel) return;
+  await handleStatusUpdate(orderToCancel.id, 'CANCELLED', reason);
+};
 
   if (loading && allOrders.length === 0) {
     return (

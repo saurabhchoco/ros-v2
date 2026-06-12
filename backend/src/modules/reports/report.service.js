@@ -90,19 +90,20 @@ function getDateInterval(period) {
 async function getBrandAnalytics(organizationId, period = 'day') {
   const interval = getDateInterval(period);
 
-  // Main metrics
+  // Main metrics – exclude cancelled orders
   const mainQuery = `
     SELECT
-      COALESCE(SUM(grand_total), 0) AS total_revenue,
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS total_revenue,
       COUNT(*) AS total_orders,
-      COALESCE(AVG(grand_total), 0) AS avg_order_value
+      COALESCE(AVG(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) AS avg_order_value
     FROM orders
     WHERE organization_id = $1
       AND created_at >= NOW() - $2::interval
+      AND order_status != 'CANCELLED'
   `;
   const mainResult = await pool.query(mainQuery, [organizationId, interval]);
 
-  // Top 5 items
+  // Top 5 items – also exclude cancelled orders
   const topItemsQuery = `
     SELECT
       oi.item_name,
@@ -112,13 +113,14 @@ async function getBrandAnalytics(organizationId, period = 'day') {
     JOIN orders o ON oi.order_id = o.id
     WHERE o.organization_id = $1
       AND o.created_at >= NOW() - $2::interval
+      AND o.order_status != 'CANCELLED'
     GROUP BY oi.item_name
     ORDER BY total_revenue DESC
     LIMIT 5
   `;
   const topItemsResult = await pool.query(topItemsQuery, [organizationId, interval]);
 
-  // Outlet‑level summary (for the aggregated view)
+  // Outlet‑level summary – exclude cancelled orders
   const outletsQuery = `
     SELECT
       o.id,
@@ -129,6 +131,7 @@ async function getBrandAnalytics(organizationId, period = 'day') {
     LEFT JOIN orders ord ON ord.outlet_id = o.id
       AND ord.organization_id = $1
       AND ord.created_at >= NOW() - $2::interval
+      AND ord.order_status != 'CANCELLED'
     WHERE o.organization_id = $1
     GROUP BY o.id, o.name
     ORDER BY revenue DESC
@@ -158,17 +161,18 @@ async function getOutletAnalytics(outletId, organizationId, period = 'day') {
   const interval = getDateInterval(period);
   const query = `
     SELECT
-      COALESCE(SUM(grand_total), 0) AS total_revenue,
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS total_revenue,
       COUNT(*) AS total_orders,
-      COALESCE(AVG(grand_total), 0) AS avg_order_value
+      COALESCE(AVG(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) AS avg_order_value
     FROM orders
     WHERE outlet_id = $1
       AND organization_id = $2
       AND created_at >= NOW() - $3::interval
+      AND order_status != 'CANCELLED'
   `;
   const result = await pool.query(query, [outletId, organizationId, interval]);
 
-  // Top items for this outlet
+  // Top items for this outlet – exclude cancelled
   const topItemsQuery = `
     SELECT
       oi.item_name,
@@ -179,6 +183,7 @@ async function getOutletAnalytics(outletId, organizationId, period = 'day') {
     WHERE o.outlet_id = $1
       AND o.organization_id = $2
       AND o.created_at >= NOW() - $3::interval
+      AND o.order_status != 'CANCELLED'
     GROUP BY oi.item_name
     ORDER BY total_revenue DESC
     LIMIT 5
