@@ -5,7 +5,7 @@ import VendorScreen from './pages/VendorScreen'
 import VendorLanding from './pages/VendorLanding'
 import './index.css'
 import './services/axiosConfig'
-import { registerSW } from 'virtual:pwa-register'
+// import { registerSW } from 'virtual:pwa-register'
 import { Toaster } from 'react-hot-toast'; 
 import ErrorBoundary from './components/ErrorBoundary';
 

@@ -78,6 +78,18 @@ async function reportRoutes(app) {
     reportController.getDashboardByDateRange
   );
 
+  app.get(
+    '/api/v1/brand/peak-hours',
+    {
+      preHandler: [
+        authMiddleware,
+        userContextMiddleware,
+        roleMiddleware(['BRAND_OWNER'])
+      ]
+    },
+    reportController.getPeakHoursHandler
+  );
+
 }
 
 module.exports = reportRoutes;

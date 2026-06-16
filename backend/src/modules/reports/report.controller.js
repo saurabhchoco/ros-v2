@@ -28,6 +28,8 @@ async function getByDateRange(request, reply) {
 async function getBrandAnalytics(request, reply) {
   const { period = 'day' } = request.query;
   const organizationId = request.userContext.organization_id;
+  console.log('[CONTROLLER] getBrandAnalytics called, organizationId:', organizationId, 'period:', period);
+  console.log('[getBrandAnalytics] organizationId from userContext:', organizationId);
   if (!organizationId) {
     return reply.status(400).send({ success: false, message: 'No organization associated' });
   }
@@ -102,6 +104,15 @@ async function getDashboardByDateRange(request, reply) {
   return reply.send({ success: true, data });
 }
 
+// backend/src/modules/reports/report.controller.js
+
+async function getPeakHoursHandler(request, reply) {
+  const { organization_id } = request.userContext;
+  const { period = 'week' } = request.query;
+  const data = await reportService.getPeakHours(organization_id, period);
+  return reply.send({ success: true, data });
+}
+
 module.exports = {
   getSummary,
   getByDateRange,
@@ -112,5 +123,6 @@ module.exports = {
   getOrderStatusDistribution,
   getOutletComparison,
   getDashboardSummary,
-  getDashboardByDateRange
+  getDashboardByDateRange,
+  getPeakHoursHandler
 };

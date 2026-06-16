@@ -5,41 +5,64 @@ async function getSummaryReport(
   outletId,
   date
 ) {
-
   const dateStr = date || new Date().toISOString().split('T')[0];
 
   const result = await pool.query(
     `
-    SELECT 
-      COUNT(id) as total_orders,
-      SUM(grand_total) as total_revenue,
-      AVG(grand_total) as avg_order_value,
-      COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) as completed_orders,
+    SELECT
+      COUNT(
+        CASE
+          WHEN order_status != 'CANCELLED'
+          THEN 1
+        END
+      ) as total_orders,
+
+      COALESCE(
+        SUM(
+          CASE
+            WHEN payment_status = 'PAID'
+             AND order_status = 'COMPLETED'
+            THEN grand_total
+            ELSE 0
+          END
+        ), 0
+      ) as total_revenue,
+
+      COUNT(
+        CASE
+          WHEN payment_status = 'PAID'
+           AND order_status = 'COMPLETED'
+          THEN 1
+        END
+      ) as completed_orders,
+
       COUNT(CASE WHEN order_status = 'NEW' THEN 1 END) as new_orders,
       COUNT(CASE WHEN order_status = 'PREPARING' THEN 1 END) as preparing_orders,
       COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) as cancelled_orders
+
     FROM orders
     WHERE organization_id = $1
-    AND outlet_id = $2
-    AND DATE(created_at) = $3::date
-      AND order_status != 'CANCELLED'
+      AND outlet_id = $2
+      AND DATE(created_at) = $3::date
     `,
     [organizationId, outletId, dateStr]
   );
 
   const row = result.rows[0];
 
+  const revenue = parseFloat(row.total_revenue || 0);
+  const completedOrders = parseInt(row.completed_orders || 0);
+
   return {
     date: dateStr,
     totalOrders: parseInt(row.total_orders || 0),
-    totalRevenue: parseFloat(row.total_revenue || 0),
-    avgOrderValue: parseFloat(row.avg_order_value || 0),
-    completedOrders: parseInt(row.completed_orders || 0),
+    totalRevenue: revenue,
+    avgOrderValue: completedOrders > 0 ? revenue / completedOrders : 0,
+    completedOrders,
     newOrders: parseInt(row.new_orders || 0),
     preparingOrders: parseInt(row.preparing_orders || 0),
-    cancelledOrders: parseInt(row.cancelled_orders || 0)  // optional
+    cancelledOrders: parseInt(row.cancelled_orders || 0)
   };
-
 }
 
 async function getDateRangeReport(
@@ -48,34 +71,62 @@ async function getDateRangeReport(
   startDate,
   endDate
 ) {
-
   const result = await pool.query(
     `
-    SELECT 
+    SELECT
       DATE(created_at) as date,
-      COUNT(id) as total_orders,
-      SUM(grand_total) as total_revenue,
-      AVG(grand_total) as avg_order_value,
-      COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) as completed_orders
+
+      COUNT(
+        CASE
+          WHEN order_status != 'CANCELLED'
+          THEN 1
+        END
+      ) as total_orders,
+
+      COALESCE(
+        SUM(
+          CASE
+            WHEN payment_status = 'PAID'
+             AND order_status = 'COMPLETED'
+            THEN grand_total
+            ELSE 0
+          END
+        ), 0
+      ) as total_revenue,
+
+      COUNT(
+        CASE
+          WHEN payment_status = 'PAID'
+           AND order_status = 'COMPLETED'
+          THEN 1
+        END
+      ) as completed_orders
+
     FROM orders
     WHERE organization_id = $1
-    AND outlet_id = $2
-    AND DATE(created_at) BETWEEN $3::date AND $4::date
-    AND order_status != 'CANCELLED'
+      AND outlet_id = $2
+      AND DATE(created_at) BETWEEN $3::date AND $4::date
     GROUP BY DATE(created_at)
     ORDER BY DATE(created_at) DESC
     `,
     [organizationId, outletId, startDate, endDate]
   );
 
-  return result.rows.map(row => ({
-    date: row.date,
-    totalOrders: parseInt(row.total_orders || 0),
-    totalRevenue: parseFloat(row.total_revenue || 0),
-    avgOrderValue: parseFloat(row.avg_order_value || 0),
-    completedOrders: parseInt(row.completed_orders || 0)
-  }));
+  return result.rows.map(row => {
+    const revenue = parseFloat(row.total_revenue || 0);
+    const completedOrders = parseInt(row.completed_orders || 0);
 
+    return {
+      date: row.date,
+      totalOrders: parseInt(row.total_orders || 0),
+      totalRevenue: revenue,
+      avgOrderValue:
+        completedOrders > 0
+          ? revenue / completedOrders
+          : 0,
+      completedOrders
+    };
+  });
 }
 
 // Helper to get date interval based on period string
@@ -88,22 +139,24 @@ function getDateInterval(period) {
 }
 
 async function getBrandAnalytics(organizationId, period = 'day') {
+  console.log('GE BRAND ANALYTICSs');
   const interval = getDateInterval(period);
 
-  // Main metrics – exclude cancelled orders
+  // 1. Main metrics
   const mainQuery = `
     SELECT
-      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS total_revenue,
-      COUNT(*) AS total_orders,
-      COALESCE(AVG(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) AS avg_order_value
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN grand_total ELSE 0 END), 0) AS total_revenue,
+      COUNT(CASE WHEN order_status != 'CANCELLED' THEN 1 END) AS received_orders,
+      COUNT(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN 1 END) AS completed_orders,
+      COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) AS cancelled_orders,
+      COALESCE(AVG(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN grand_total END), 0) AS avg_order_value
     FROM orders
     WHERE organization_id = $1
       AND created_at >= NOW() - $2::interval
-      AND order_status != 'CANCELLED'
   `;
   const mainResult = await pool.query(mainQuery, [organizationId, interval]);
 
-  // Top 5 items – also exclude cancelled orders
+  // 2. Top items (paid + completed)
   const topItemsQuery = `
     SELECT
       oi.item_name,
@@ -113,66 +166,97 @@ async function getBrandAnalytics(organizationId, period = 'day') {
     JOIN orders o ON oi.order_id = o.id
     WHERE o.organization_id = $1
       AND o.created_at >= NOW() - $2::interval
-      AND o.order_status != 'CANCELLED'
+      AND o.payment_status = 'PAID'
+      AND o.order_status = 'COMPLETED'
     GROUP BY oi.item_name
     ORDER BY total_revenue DESC
     LIMIT 5
   `;
   const topItemsResult = await pool.query(topItemsQuery, [organizationId, interval]);
 
-  // Outlet‑level summary – exclude cancelled orders
+  // 3. Outlet summary – ✅ CORRECTED: filter by organization_id
   const outletsQuery = `
     SELECT
-      o.id,
-      o.name,
-      COUNT(ord.id) AS order_count,
-      COALESCE(SUM(ord.grand_total), 0) AS revenue
-    FROM outlets o
-    LEFT JOIN orders ord ON ord.outlet_id = o.id
-      AND ord.organization_id = $1
-      AND ord.created_at >= NOW() - $2::interval
-      AND ord.order_status != 'CANCELLED'
-    WHERE o.organization_id = $1
-    GROUP BY o.id, o.name
-    ORDER BY revenue DESC
+  o.id,
+  o.name,
+  COUNT(ord.id) AS order_count,
+  COALESCE(SUM(ord.grand_total), 0) AS revenue
+FROM outlets o
+LEFT JOIN orders ord ON ord.outlet_id = o.id
+  AND ord.organization_id = o.organization_id
+  AND ord.created_at >= NOW() - $2::interval
+WHERE o.organization_id = $1
+GROUP BY o.id, o.name
+ORDER BY revenue DESC
   `;
   const outletsResult = await pool.query(outletsQuery, [organizationId, interval]);
 
+  // 4. Peak hours (optional)
+  const peakHoursData = await getPeakHours(organizationId, period);
+
   return {
     period,
-    totalRevenue: parseFloat(mainResult.rows[0].total_revenue),
-    totalOrders: parseInt(mainResult.rows[0].total_orders),
-    avgOrderValue: parseFloat(mainResult.rows[0].avg_order_value),
+    summary: {
+      revenue: parseFloat(mainResult.rows[0].total_revenue),
+      receivedOrders: parseInt(mainResult.rows[0].received_orders),
+      completedOrders: parseInt(mainResult.rows[0].completed_orders),
+      cancelledOrders: parseInt(mainResult.rows[0].cancelled_orders),
+      avgOrderValue: parseFloat(mainResult.rows[0].avg_order_value),
+    },
     topItems: topItemsResult.rows.map(row => ({
       name: row.item_name,
       quantity: parseInt(row.total_quantity),
       revenue: parseFloat(row.total_revenue)
     })),
     outlets: outletsResult.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      orderCount: parseInt(row.order_count),
+      outlet_id: row.id,
+      outlet_name: row.name,
+      orders: parseInt(row.order_count),
       revenue: parseFloat(row.revenue)
-    }))
+    })),
+    peakHours: peakHoursData
   };
 }
 
-async function getOutletAnalytics(outletId, organizationId, period = 'day') {
+async function getOutletAnalytics(
+  outletId,
+  organizationId,
+  period = 'day'
+) {
   const interval = getDateInterval(period);
+
   const query = `
     SELECT
-      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS total_revenue,
-      COUNT(*) AS total_orders,
-      COALESCE(AVG(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) AS avg_order_value
+      COALESCE(
+        SUM(
+          CASE
+            WHEN payment_status = 'PAID'
+             AND order_status = 'COMPLETED'
+            THEN grand_total
+            ELSE 0
+          END
+        ), 0
+      ) AS total_revenue,
+
+      COUNT(
+        CASE
+          WHEN payment_status = 'PAID'
+           AND order_status = 'COMPLETED'
+          THEN 1
+        END
+      ) AS completed_orders
+
     FROM orders
     WHERE outlet_id = $1
       AND organization_id = $2
       AND created_at >= NOW() - $3::interval
-      AND order_status != 'CANCELLED'
   `;
-  const result = await pool.query(query, [outletId, organizationId, interval]);
 
-  // Top items for this outlet – exclude cancelled
+  const result = await pool.query(
+    query,
+    [outletId, organizationId, interval]
+  );
+
   const topItemsQuery = `
     SELECT
       oi.item_name,
@@ -183,18 +267,35 @@ async function getOutletAnalytics(outletId, organizationId, period = 'day') {
     WHERE o.outlet_id = $1
       AND o.organization_id = $2
       AND o.created_at >= NOW() - $3::interval
-      AND o.order_status != 'CANCELLED'
+      AND o.payment_status = 'PAID'
+      AND o.order_status = 'COMPLETED'
     GROUP BY oi.item_name
     ORDER BY total_revenue DESC
     LIMIT 5
   `;
-  const topItemsResult = await pool.query(topItemsQuery, [outletId, organizationId, interval]);
+
+  const topItemsResult = await pool.query(
+    topItemsQuery,
+    [outletId, organizationId, interval]
+  );
+
+  const revenue = parseFloat(
+    result.rows[0].total_revenue || 0
+  );
+
+  const completedOrders = parseInt(
+    result.rows[0].completed_orders || 0
+  );
 
   return {
     period,
-    totalRevenue: parseFloat(result.rows[0].total_revenue),
-    totalOrders: parseInt(result.rows[0].total_orders),
-    avgOrderValue: parseFloat(result.rows[0].avg_order_value),
+    totalRevenue: revenue,
+    totalOrders: completedOrders,
+    avgOrderValue:
+      completedOrders > 0
+        ? revenue / completedOrders
+        : 0,
+
     topItems: topItemsResult.rows.map(row => ({
       name: row.item_name,
       quantity: parseInt(row.total_quantity),
@@ -236,13 +337,16 @@ async function getRevenueTrend(organizationId) {
   const result = await pool.query(`
     SELECT DATE(created_at) as date, COALESCE(SUM(grand_total), 0) as revenue
     FROM orders
-    WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '7 days'
+    WHERE organization_id = $1 
+      AND created_at >= NOW() - INTERVAL '7 days'
+      AND payment_status = 'PAID'
+      AND order_status = 'COMPLETED'
     GROUP BY DATE(created_at)
     ORDER BY date ASC
   `, [organizationId]);
   return result.rows.map(row => ({
     date: row.date.toISOString().slice(0, 10),
-    revenue: parseFloat(row.revenue)
+    revenue: parseFloat(row.revenue || 0)
   }));
 }
 
@@ -259,26 +363,62 @@ async function getOrderStatusDistribution(organizationId) {
 
 // Outlet comparison
 async function getOutletComparison(organizationId) {
-  const result = await pool.query(`
-    SELECT o.id, o.name,
-      COUNT(ord.id) as order_count,
-      COALESCE(SUM(ord.grand_total), 0) as revenue,
-      COALESCE(AVG(ord.grand_total), 0) as avg_order_value,
-      COUNT(CASE WHEN ord.order_status IN ('NEW','PREPARING') THEN 1 END) as pending_orders
+  const result = await pool.query(
+    `
+    SELECT
+      o.id,
+      o.name,
+
+      COALESCE(
+        SUM(
+          CASE
+            WHEN ord.payment_status = 'PAID'
+             AND ord.order_status = 'COMPLETED'
+            THEN ord.grand_total
+            ELSE 0
+          END
+        ),0
+      ) AS revenue,
+
+      COUNT(
+        CASE
+          WHEN ord.payment_status = 'PAID'
+           AND ord.order_status = 'COMPLETED'
+          THEN 1
+        END
+      ) AS order_count
+
     FROM outlets o
-    LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.organization_id = o.organization_id
+
+    LEFT JOIN orders ord
+      ON ord.outlet_id = o.id
+     AND ord.organization_id = o.organization_id
+     AND ord.created_at >= NOW() - INTERVAL '7 days'
+
     WHERE o.organization_id = $1
+
     GROUP BY o.id, o.name
     ORDER BY revenue DESC
-  `, [organizationId]);
-  return result.rows.map(row => ({
-    id: row.id,
-    name: row.name,
-    orderCount: parseInt(row.order_count),
-    revenue: parseFloat(row.revenue),
-    avgOrderValue: parseFloat(row.avg_order_value),
-    pendingOrders: parseInt(row.pending_orders)
-  }));
+    `,
+    [organizationId]
+  );
+
+  return result.rows.map(row => {
+    const revenue = parseFloat(row.revenue || 0);
+    const orderCount = parseInt(row.order_count || 0);
+
+    return {
+      id: row.id,
+      name: row.name,
+      revenue,
+      orderCount,
+      avgOrderValue:
+        orderCount > 0
+          ? revenue / orderCount
+          : 0,
+      pendingOrders: 0
+    };
+  });
 }
 
 async function getDashboardSummary(organizationId, outletId = null) {
@@ -290,26 +430,29 @@ async function getDashboardSummary(organizationId, outletId = null) {
     params.push(outletId);
   }
 
-  // 1. Main metrics (no GROUP BY)
+  // 1. Main metrics
   const orderQuery = `
     SELECT 
       COUNT(*) as total_orders,
-      COALESCE(SUM(grand_total), 0) as total_revenue,
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN grand_total ELSE 0 END), 0) as total_revenue,
+      COUNT(CASE WHEN order_status IN ('NEW','PREPARING','READY','COMPLETED') THEN 1 END) as received_orders,
       COUNT(CASE WHEN order_status IN ('NEW','PREPARING') THEN 1 END) as pending_orders,
       COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) as completed_orders,
-      COALESCE(AVG(grand_total), 0) as avg_order_value
+      COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) as total_cancellations,
+      COALESCE(AVG(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN grand_total END), 0) as avg_order_value
     FROM orders
     WHERE organization_id = $1 AND DATE(created_at) = $2
     ${outletFilter}
   `;
   const orderRes = await pool.query(orderQuery, params);
 
-  // 2. Top 5 items
+  // 2. Top 5 items (only from paid/completed orders)
   const topItemsQuery = `
     SELECT oi.item_name, SUM(oi.quantity) as total_qty, SUM(oi.line_total) as revenue
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
     WHERE o.organization_id = $1 AND DATE(o.created_at) = $2
+      AND o.payment_status = 'PAID' AND o.order_status = 'COMPLETED'
     ${outletFilter}
     GROUP BY oi.item_name
     ORDER BY revenue DESC
@@ -322,42 +465,33 @@ async function getDashboardSummary(organizationId, outletId = null) {
     SELECT payment_method, COALESCE(SUM(grand_total), 0) as total
     FROM orders
     WHERE organization_id = $1 AND DATE(created_at) = $2
+      AND payment_status = 'PAID' AND order_status = 'COMPLETED'
     ${outletFilter}
     GROUP BY payment_method
   `;
   const paymentRes = await pool.query(paymentQuery, params);
 
-  // 4. Order source breakdown – fix GROUP BY by using a subquery or repeating CASE
+  // 4. Order source breakdown
   const sourceQuery = `
-    SELECT source, COUNT(*) as count
-    FROM (
-      SELECT 
-        CASE 
-          WHEN order_source = 'PUBLIC_QR' THEN 'QR'
-          ELSE order_source
-        END as source
-      FROM orders
-      WHERE organization_id = $1 AND DATE(created_at) = $2
-      ${outletFilter}
-    ) t
-    GROUP BY source
-  `;
+SELECT source, COUNT(*) as count
+FROM (
+  SELECT
+    CASE
+      WHEN order_source='PUBLIC_QR'
+      THEN 'QR'
+      ELSE COALESCE(order_source,'UNKNOWN')
+    END as source
+  FROM orders
+  WHERE organization_id = $1
+    AND DATE(created_at) = $2
+    AND order_status != 'CANCELLED'
+    ${outletFilter}
+) t
+GROUP BY source
+`;
   const sourceRes = await pool.query(sourceQuery, params);
 
-  // 5. Payment status KPIs
-  const paidQuery = `
-    SELECT 
-      COUNT(CASE WHEN payment_status = 'PAID' THEN 1 END) as paid_orders,
-      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total END), 0) as paid_amount,
-      COUNT(CASE WHEN payment_status IN ('PENDING', 'PENDING_PROOF') THEN 1 END) as pending_orders,
-      COALESCE(SUM(CASE WHEN payment_status IN ('PENDING', 'PENDING_PROOF') THEN grand_total END), 0) as pending_amount
-    FROM orders
-    WHERE organization_id = $1 AND DATE(created_at) = $2
-    ${outletFilter}
-  `;
-  const paidRes = await pool.query(paidQuery, params);
-
-  // 6. Order status counts (NEW, PREPARING, READY, COMPLETED)
+  // 5. Order status counts
   const statusQuery = `
     SELECT order_status, COUNT(*) as count
     FROM orders
@@ -369,55 +503,26 @@ async function getDashboardSummary(organizationId, outletId = null) {
   const orderStatusCounts = {};
   statusRes.rows.forEach(row => { orderStatusCounts[row.order_status] = parseInt(row.count); });
 
-  // Cancellations today
-  const cancelQuery = `
-  SELECT COUNT(*) as total_cancelled
-  FROM orders
-  WHERE organization_id = $1 AND DATE(created_at) = $2 AND order_status = 'CANCELLED'
-  ${outletId ? 'AND outlet_id = $3' : ''}
-`;
-  const cancelRes = await pool.query(cancelQuery, params);
-
-  // Cancellations by outlet (only for brand owner, not for single outlet)
-  let cancellationsByOutlet = [];
-  if (!outletId) {
-    const cancelByOutletQuery = `
-    SELECT o.id as outlet_id, o.name as outlet_name, COALESCE(COUNT(ord.id), 0) as cancelled_count
-    FROM outlets o
-    LEFT JOIN orders ord ON ord.outlet_id = o.id AND ord.order_status = 'CANCELLED' AND DATE(ord.created_at) = $1
-    WHERE o.organization_id = $2
-    GROUP BY o.id, o.name
-  `;
-    const cancelByOutletRes = await pool.query(cancelByOutletQuery, [today, organizationId]);
-    cancellationsByOutlet = cancelByOutletRes.rows.map(row => ({
-      outletId: row.outlet_id,
-      outletName: row.outlet_name,
-      cancelledCount: parseInt(row.cancelled_count)
-    }));
-  }
-
   return {
-    totalOrders: parseInt(orderRes.rows[0].total_orders || 0),
     totalRevenue: parseFloat(orderRes.rows[0].total_revenue || 0),
+    totalOrders: parseInt(orderRes.rows[0].total_orders || 0),
+    receivedOrders: parseInt(orderRes.rows[0].received_orders || 0),
     pendingOrders: parseInt(orderRes.rows[0].pending_orders || 0),
     completedOrders: parseInt(orderRes.rows[0].completed_orders || 0),
+    totalCancellations: parseInt(orderRes.rows[0].total_cancellations || 0),
     avgOrderValue: parseFloat(orderRes.rows[0].avg_order_value || 0),
     topItems: topItemsRes.rows,
     paymentBreakdown: paymentRes.rows,
     orderSource: sourceRes.rows,
-    paymentStatus: paidRes.rows[0],
-    orderStatus: orderStatusCounts,
-    totalCancellations: parseInt(cancelRes.rows[0].total_cancelled || 0),
-    cancellationsByOutlet: cancellationsByOutlet
+    orderStatus: orderStatusCounts
   };
 }
 
-// Add this function to your existing report.service.js
 async function getDashboardByDateRange(organizationId, outletId, startDate, endDate) {
   // Use PostgreSQL to compute endDate+1 day (timezone safe)
   const mainQuery = `
     SELECT
-      COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN grand_total ELSE 0 END), 0) AS revenue,
+      COALESCE(SUM(CASE WHEN payment_status = 'PAID' AND order_status = 'COMPLETED' THEN grand_total ELSE 0 END), 0) AS revenue,
       COUNT(*) AS orders,
       COUNT(CASE WHEN order_status = 'COMPLETED' THEN 1 END) AS completed,
       COUNT(CASE WHEN order_status = 'CANCELLED' THEN 1 END) AS cancelled,
@@ -432,7 +537,7 @@ async function getDashboardByDateRange(organizationId, outletId, startDate, endD
   const mainRes = await pool.query(mainQuery, [organizationId, outletId, startDate, endDate]);
   const main = mainRes.rows[0];
 
-  // Similarly fix other queries (payment, source, topItems)
+  // Payment breakdown
   const paymentQuery = `
     SELECT payment_method, COALESCE(SUM(grand_total), 0) AS total
     FROM orders
@@ -444,9 +549,6 @@ async function getDashboardByDateRange(organizationId, outletId, startDate, endD
     GROUP BY payment_method
   `;
   const paymentRes = await pool.query(paymentQuery, [organizationId, outletId, startDate, endDate]);
-  // ... (same for sourceQuery and topItemsQuery – replace the date condition)
-
-  // Payment breakdown object
   const paymentBreakdown = {};
   paymentRes.rows.forEach(row => {
     paymentBreakdown[row.payment_method] = parseFloat(row.total);
@@ -477,6 +579,8 @@ async function getDashboardByDateRange(organizationId, outletId, startDate, endD
       AND o.outlet_id = $2
       AND o.created_at >= $3::timestamptz
       AND o.created_at < ($4::timestamptz + INTERVAL '1 day')
+      AND o.payment_status = 'PAID'
+      AND o.order_status = 'COMPLETED'
     GROUP BY oi.item_name
     ORDER BY quantity DESC
     LIMIT 5
@@ -507,6 +611,31 @@ async function getDashboardByDateRange(organizationId, outletId, startDate, endD
   };
 }
 
+// backend/src/modules/reports/report.service.js
+
+/**
+ * Get peak hours (orders per hour) for an organization over a period
+ * @param {string} organizationId
+ * @param {string} period - 'day', 'week', 'month'
+ * @returns {Promise<Array>} Array of { hour, count }
+ */
+async function getPeakHours(organizationId, period = 'week') {
+  const interval = period === 'week' ? '7 days' : period === 'month' ? '30 days' : '1 day';
+  const query = `
+    SELECT 
+      EXTRACT(HOUR FROM created_at) as hour,
+      COUNT(*) as count
+    FROM orders
+    WHERE organization_id = $1
+      AND created_at >= NOW() - $2::interval
+      AND order_status != 'CANCELLED'
+    GROUP BY hour
+    ORDER BY hour ASC
+  `;
+  const result = await pool.query(query, [organizationId, interval]);
+  return result.rows;
+}
+
 module.exports = {
   getSummaryReport,
   getDateRangeReport,
@@ -517,5 +646,6 @@ module.exports = {
   getOrderStatusDistribution,
   getOutletComparison,
   getDashboardSummary,
-  getDashboardByDateRange
+  getDashboardByDateRange,
+  getPeakHours
 };

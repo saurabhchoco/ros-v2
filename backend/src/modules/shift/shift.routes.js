@@ -41,7 +41,7 @@ async function shiftRoutes(app) {
       preHandler: [
         authMiddleware,
         userContextMiddleware,
-        roleMiddleware(['OUTLET_MANAGER', 'ARM'])
+        roleMiddleware(['OUTLET_MANAGER', 'ARM', 'CAPTAIN'])
       ],
       schema: {
         querystring: {
@@ -62,8 +62,8 @@ async function shiftRoutes(app) {
     {
       preHandler: [
         authMiddleware,
-        userContextMiddleware
-        // roleMiddleware(['OUTLET_MANAGER', 'ARM', 'CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN'])
+        userContextMiddleware,
+        roleMiddleware(['OUTLET_MANAGER', 'ARM', 'CAPTAIN', 'GSA', 'CASHIER', 'KITCHEN'])
       ],
       schema: {
         body: {

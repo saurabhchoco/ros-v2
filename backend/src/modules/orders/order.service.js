@@ -409,10 +409,14 @@ async function generateToken(outletId) {
   }
 }
 
-async function settleOrder(orderId, paymentMethod, userId, organizationId) { 
+// backend/src/modules/orders/order.service.js
+
+async function settleOrder(orderId, paymentMethod, userId, organizationId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    // 1. Mark order as PAID
     const result = await client.query(
       `UPDATE orders
        SET payment_status = 'PAID',
@@ -425,8 +429,8 @@ async function settleOrder(orderId, paymentMethod, userId, organizationId) {
        RETURNING *`,
       [paymentMethod, orderId, organizationId]
     );
+
     if (!result.rows[0]) {
-      // Check if order exists but is cancelled (within same org)
       const check = await client.query(
         `SELECT order_status FROM orders WHERE id = $1 AND organization_id = $2`,
         [orderId, organizationId]
@@ -436,6 +440,17 @@ async function settleOrder(orderId, paymentMethod, userId, organizationId) {
       }
       throw new Error('Order not found or already settled');
     }
+
+    // 2. Link order to the cashier's active shift (if any)
+    const cashierShift = await getActiveShiftForUser(userId);
+    if (cashierShift) {
+      await client.query(
+        `UPDATE orders SET shift_session_id = $1 WHERE id = $2`,
+        [cashierShift.id, orderId]
+      );
+    }
+
+    // 3. Audit log
     await createAuditLog({
       organizationId: result.rows[0].organization_id,
       outletId: result.rows[0].outlet_id,
@@ -445,6 +460,7 @@ async function settleOrder(orderId, paymentMethod, userId, organizationId) {
       entityId: orderId,
       newValue: { paymentMethod, status: 'PAID' }
     });
+
     await client.query('COMMIT');
     return result.rows[0];
   } catch (err) {

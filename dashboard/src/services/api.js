@@ -92,6 +92,13 @@ export const apiService = {
     });
   },
 
+  async getBrandAnalyticsV3(period) {
+    return axios.get(`${API_URL}/analytics-v3/brand`, {
+      params: { period },
+      headers: await getAuthHeaders()
+    });
+  },
+
   async getOutletAnalytics(outletId, period = 'day') {
     return axios.get(`${API_URL}/outlet/analytics?outletId=${outletId}&period=${period}`, {
       headers: await getAuthHeaders()
@@ -303,6 +310,13 @@ export const apiService = {
   getReportDashboardRange: async (startDate, endDate) => {
     return axios.get(`${API_URL}/reports/dashboard-range`, {
       params: { startDate, endDate },
+      headers: await getAuthHeaders()
+    });
+  },
+
+  async getPeakHours(period = 'week') {
+    return axios.get(`${API_URL}/brand/peak-hours`, {
+      params: { period },
       headers: await getAuthHeaders()
     });
   },

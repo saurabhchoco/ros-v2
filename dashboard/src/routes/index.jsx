@@ -26,6 +26,10 @@ import OutletStaff from '../pages/owner/OutletStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 import AccessDeniedPage from '../pages/AccessDeniedPage';
 
+import OverviewPageV2 from '../pages/owner/v2/OverviewPage';
+import OutletsPageV2 from '../pages/owner/v2/OutletsPage';
+import PerformancePageV2 from '../pages/owner/v2/PerformancePage';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -200,6 +204,19 @@ export const router = createBrowserRouter([
       {
         path: '*',
         element: <NotFoundPage />
+      },
+
+      {
+        path: 'owner/v2/overview',
+        element: <ProtectedRoute roles={['BRAND_OWNER']}><OverviewPageV2 /></ProtectedRoute>
+      },
+      {
+        path: 'owner/v2/outlets',
+        element: <ProtectedRoute roles={['BRAND_OWNER']}><OutletsPageV2 /></ProtectedRoute>
+      },
+      {
+        path: 'owner/v2/performance',
+        element: <ProtectedRoute roles={['BRAND_OWNER']}><PerformancePageV2 /></ProtectedRoute>
       }
     ]
   }

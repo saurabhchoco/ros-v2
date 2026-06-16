@@ -36,33 +36,34 @@ class AnalyticsService {
     };
   }
 
-  async getOutletPerformance(organizationId, period = 'week') {
-    const { start, end } = this.getDateFilter(period);
-    const query = `
-      SELECT
-        o.id AS outlet_id,
-        o.name AS outlet_name,
-        COALESCE(SUM(ord.grand_total), 0) AS revenue,
-        COUNT(DISTINCT ord.id) AS orders,
-        COALESCE(AVG(ord.grand_total), 0) AS aov,
-        ROUND(COALESCE(SUM(ord.grand_total) / SUM(SUM(ord.grand_total)) OVER (), 0) * 100, 1) AS share_of_brand_pct,
-        ROUND(
-          COUNT(DISTINCT CASE WHEN ord.order_status = 'COMPLETED' THEN ord.id END)::NUMERIC /
-          NULLIF(COUNT(DISTINCT CASE WHEN ord.order_status != 'CANCELLED' THEN ord.id END), 0),
-          2
-        ) * 100 AS completion_rate_pct
-      FROM outlets o
-      LEFT JOIN orders ord ON ord.outlet_id = o.id
-        AND ord.created_at >= $1
-        AND ord.created_at < $2
-        AND ord.order_status != 'CANCELLED'
-        AND ord.organization_id = $3
-      GROUP BY o.id, o.name
-      ORDER BY revenue DESC
-    `;
-    const result = await pool.query(query, [start, end, organizationId]);
-    return result.rows;
-  }
+async getOutletPerformance(organizationId, period = 'week') {
+  const { start, end } = this.getDateFilter(period);
+  const query = `
+    SELECT
+      o.id AS outlet_id,
+      o.name AS outlet_name,
+      COALESCE(SUM(ord.grand_total), 0) AS revenue,
+      COUNT(DISTINCT ord.id) AS orders,
+      COALESCE(AVG(ord.grand_total), 0) AS aov,
+      ROUND(COALESCE(SUM(ord.grand_total) / SUM(SUM(ord.grand_total)) OVER (), 0) * 100, 1) AS share_of_brand_pct,
+      ROUND(
+        COUNT(DISTINCT CASE WHEN ord.order_status = 'COMPLETED' THEN ord.id END)::NUMERIC /
+        NULLIF(COUNT(DISTINCT CASE WHEN ord.order_status != 'CANCELLED' THEN ord.id END), 0),
+        2
+      ) * 100 AS completion_rate_pct
+    FROM outlets o
+    LEFT JOIN orders ord ON ord.outlet_id = o.id
+      AND ord.created_at >= $1
+      AND ord.created_at < $2
+      AND ord.order_status != 'CANCELLED'
+      AND ord.organization_id = $3
+    WHERE o.organization_id = $3   -- ✅ ADD THIS LINE
+    GROUP BY o.id, o.name
+    ORDER BY revenue DESC
+  `;
+  const result = await pool.query(query, [start, end, organizationId]);
+  return result.rows;
+}
 
   async getProductPerformance(organizationId, period = 'week') {
     const { start, end } = this.getDateFilter(period);
